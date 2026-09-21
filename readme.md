@@ -1,68 +1,122 @@
-# Maven Build Cache Proxy — Chunk 1
+# Maven Build Cache S3 Proxy
 
-Minimal Spring Boot implementation of the HTTP/storage boundary.
+Small Java HTTP service intended to act as a gateway between the Maven Build Cache Extension and an S3-compatible storage backend.
+
+The project is being implemented incrementally. The current state is **Chunk 1**: the HTTP service and storage abstraction, using an in-memory storage implementation.
+
+## Current architecture
+
+```text
+HTTP GET / PUT
+      |
+      v
+CacheController
+      |
+      v
+CacheStorage
+      |
+      v
+InMemoryCacheStorage
+```
+
+Later, `InMemoryCacheStorage` will be supplemented/replaced by an S3-backed implementation:
+
+```text
+CacheStorage
+      |
+      v
+S3CacheStorage
+      |
+      v
+LocalStack / Amazon S3
+```
 
 ## Requirements
 
-- JDK 25
-- Maven 3.6.3+
+For local development:
 
-## Run tests
+* Docker with Docker Compose
+* IntelliJ IDEA
 
-```bash
-mvn test
+Maven does **not** need to be installed on the host. The development container provides the required JDK and Maven installation.
+
+See [`DOCKER_DEVELOPMENT.md`](DOCKER_DEVELOPMENT.md) for the complete development, testing and IntelliJ debugging workflow.
+
+## HTTP API
+
+### Store an object
+
+```http
+PUT /cache/{key}
+Content-Type: application/octet-stream
 ```
 
-## Run locally
-
-```bash
-mvn spring-boot:run
-```
-
-Or run `MavenBuildCacheProxyApplication` directly from IntelliJ.
-
-The service listens on port 8080 by default.
-
-## Manual HTTP check
-
-Store binary/text content:
-
-```bash
-curl -i -X PUT \
-  -H 'Content-Type: application/octet-stream' \
-  --data-binary 'hello-cache' \
-  http://localhost:8080/cache/com/example/demo/hash/data
-```
-
-Expected response: `204 No Content`.
-
-Retrieve it:
-
-```bash
-curl -i \
-  http://localhost:8080/cache/com/example/demo/hash/data
-```
-
-Expected response: `200 OK` with `hello-cache` as the body.
-
-Unknown keys return `404 Not Found`.
-
-## Architecture in this chunk
+Example key:
 
 ```text
-HTTP GET/PUT
-    -> CacheController
-    -> CacheStorage
-    -> InMemoryCacheStorage
+/cache/com/example/demo/hash/data
 ```
 
-`CacheStorage` is intentionally the boundary that Chunk 2 will use for `S3CacheStorage`.
+A successful PUT returns:
 
-## Deliberately not included yet
+```text
+204 No Content
+```
 
-- AWS SDK
-- S3
-- LocalStack
-- Docker
-- Maven Build Cache test client
-- AWS deployment
+### Retrieve an object
+
+```http
+GET /cache/{key}
+```
+
+If the object exists:
+
+```text
+200 OK
+Content-Type: application/octet-stream
+```
+
+If it does not exist:
+
+```text
+404 Not Found
+```
+
+## Source layout
+
+```text
+src/
+├── main/java/de/example/mavenbuildcacheproxy
+│   ├── MavenBuildCacheProxyApplication.java
+│   ├── http/
+│   │   └── CacheController.java
+│   └── storage/
+│       ├── CacheStorage.java
+│       └── InMemoryCacheStorage.java
+└── test/java/de/example/mavenbuildcacheproxy
+    ├── http/
+    │   └── CacheControllerTest.java
+    └── storage/
+        └── InMemoryCacheStorageTest.java
+```
+
+## Current scope
+
+Chunk 1 covers:
+
+* Java/Maven Spring Boot application
+* minimal HTTP GET/PUT API
+* `CacheStorage` abstraction
+* in-memory storage implementation
+* automated tests
+* containerized development environment
+* IntelliJ remote debugging
+
+Not yet included:
+
+* AWS SDK
+* S3 storage
+* LocalStack
+* production service Docker image
+* Maven Build Cache test client
+* AWS deployment

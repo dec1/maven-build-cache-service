@@ -1,0 +1,15 @@
+services:
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+      - maven-cache:/root/.m2
+    ports:
+      - "8080:8080"
+      - "5005:5005"
+
+volumes:
+  maven-cache:

@@ -20,6 +20,11 @@ public class CacheController {
         this.storage = storage;
     }
 
+    @GetMapping(value = "/hello", produces = MediaType.TEXT_PLAIN_VALUE)
+    public ResponseEntity<String> hello() {
+        return ResponseEntity.ok("hello");
+    }
+
     @PutMapping("/{*key}")
     public ResponseEntity<Void> put(
             @PathVariable String key,

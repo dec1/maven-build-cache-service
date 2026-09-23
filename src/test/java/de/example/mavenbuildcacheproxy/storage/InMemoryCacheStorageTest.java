@@ -8,14 +8,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Unit tests for {@link InMemoryCacheStorage} only.
+ * Tests {@link InMemoryCacheStorage} directly.
  *
- * <p>These tests exercise the storage implementation directly, without Spring, HTTP, Docker,
- * LocalStack or S3. Their purpose is to define the behaviour expected from the in-memory
- * implementation.</p>
- *
- * <p>They do not prove anything about persistence across process restarts, S3 semantics,
- * networking, concurrent access, or Maven Build Cache compatibility.</p>
+ * <p>No HTTP or S3 is involved.</p>
  */
 @ExtendWith(TestResultReporter.class)
 class InMemoryCacheStorageTest {
@@ -23,7 +18,7 @@ class InMemoryCacheStorageTest {
     private final InMemoryCacheStorage storage = new InMemoryCacheStorage();
 
     /**
-     * Verifies that arbitrary binary data can be stored under a key and retrieved unchanged.
+     * Stored bytes can be read back unchanged.
      */
     @Test
     @DisplayName("Memory storage: stores and retrieves binary content")
@@ -37,7 +32,7 @@ class InMemoryCacheStorageTest {
     }
 
     /**
-     * Verifies that a key that has never been stored is represented by Optional.empty().
+     * A missing key returns {@code Optional.empty()}.
      */
     @Test
     @DisplayName("Memory storage: unknown key returns empty")
@@ -46,10 +41,7 @@ class InMemoryCacheStorageTest {
     }
 
     /**
-     * Verifies that callers cannot mutate stored data indirectly through byte-array references.
-     *
-     * <p>The storage must copy data both when accepting it and when returning it. Otherwise a
-     * caller could change cached content without performing another put operation.</p>
+     * Changing an input or returned byte array must not change the stored value.
      */
     @Test
     @DisplayName("Memory storage: stored data cannot be mutated through array references")

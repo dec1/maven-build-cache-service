@@ -20,24 +20,18 @@ import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Integration tests for {@link S3CacheStorage} using a real LocalStack S3 endpoint in Docker.
+ * Tests {@link S3CacheStorage} against a real S3-compatible service.
  *
- * <p>Testcontainers starts and removes the LocalStack container automatically. LocalStack is not
- * installed separately. The test deliberately pins LocalStack 4.14.0, the final pre-2026.3
- * Community release, so these basic S3 tests do not require a LocalStack account or auth token.</p>
- *
- * <p>The tests create their own bucket and exercise {@link S3CacheStorage} directly. This keeps
- * the storage-adapter integration test separate from the HTTP contract, which is covered by
- * {@code CacheControllerTest}.</p>
+ * <p>The test starts LocalStack in Docker, creates a bucket, runs the storage operations,
+ * then removes the LocalStack container.</p>
  */
 @Testcontainers
 @ExtendWith(TestResultReporter.class)
 class S3CacheStorageIntegrationTest {
 
     /**
-     * Pinned deliberately rather than using {@code latest}: newer LocalStack releases require
-     * account authentication even for the free tier, while these tests only need basic S3
-     * PUT/GET support.
+     * Fixed version so the test environment does not change unexpectedly.
+     * This version also works without a LocalStack account or auth token.
      */
     private static final DockerImageName LOCALSTACK_IMAGE =
             DockerImageName.parse("localstack/localstack:4.14.0");
@@ -70,11 +64,9 @@ class S3CacheStorageIntegrationTest {
     }
 
     /**
-     * Proves that {@link S3CacheStorage#put(String, byte[])} writes the exact bytes to S3.
+     * PUT writes the exact bytes to S3.
      *
-     * <p>The assertion reads the object directly through the AWS SDK rather than through
-     * {@code S3CacheStorage#get}, so a matching bug in both adapter methods cannot make the test
-     * pass.</p>
+     * <p>The result is read directly with the AWS SDK, not through {@code S3CacheStorage#get()}.</p>
      */
     @Test
     @DisplayName("S3: PUT stores exact bytes in S3")
@@ -94,7 +86,7 @@ class S3CacheStorageIntegrationTest {
     }
 
     /**
-     * Proves that an object written through the adapter can be read back byte-for-byte unchanged.
+     * GET returns exactly the bytes that were stored.
      */
     @Test
     @DisplayName("S3: GET retrieves exact bytes")
@@ -108,8 +100,7 @@ class S3CacheStorageIntegrationTest {
     }
 
     /**
-     * Proves that an S3 missing-object response becomes the storage abstraction's
-     * {@code Optional.empty()} result rather than leaking an S3 exception to the caller.
+     * GET returns {@code Optional.empty()} when the S3 object does not exist.
      */
     @Test
     @DisplayName("S3: missing object returns empty")

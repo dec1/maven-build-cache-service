@@ -15,7 +15,7 @@ import software.amazon.awssdk.services.s3.S3ClientBuilder;
  * Creates the S3 client when S3 storage is enabled.
  *
  * With backend=aws, the AWS SDK uses the normal Amazon S3 endpoint and normal AWS credentials.
- * With backend=localstack, the client uses the local LocalStack endpoint and dummy credentials.
+ * With backend=localstack, the configured LocalStack endpoint and dummy credentials are used.
  */
 @Configuration
 @ConditionalOnProperty(name = "cache.storage.type", havingValue = "s3")
@@ -23,7 +23,7 @@ import software.amazon.awssdk.services.s3.S3ClientBuilder;
 public class S3Configuration {
 
     @Bean
-    public S3Client s3Client(S3Properties properties, LocalStackEndpoint localStackEndpoint) {
+    public S3Client s3Client(S3Properties properties) {
         requireText(properties.getRegion(), "cache.storage.s3.region");
         requireText(properties.getBucket(), "cache.storage.s3.bucket");
 
@@ -31,7 +31,12 @@ public class S3Configuration {
                 .region(Region.of(properties.getRegion()));
 
         if (properties.getBackend() == S3Properties.Backend.LOCALSTACK) {
-            builder.endpointOverride(localStackEndpoint.get())
+            if (properties.getLocalstackEndpoint() == null) {
+                throw new IllegalStateException(
+                        "cache.storage.s3.localstack-endpoint must be configured when cache.storage.s3.backend=localstack");
+            }
+
+            builder.endpointOverride(properties.getLocalstackEndpoint())
                     .credentialsProvider(StaticCredentialsProvider.create(
                             AwsBasicCredentials.create("test", "test")));
         } else {
@@ -43,7 +48,8 @@ public class S3Configuration {
 
     private static void requireText(String value, String propertyName) {
         if (value == null || value.isBlank()) {
-            throw new IllegalStateException(propertyName + " must be configured when cache.storage.type=s3");
+            throw new IllegalStateException(
+                    propertyName + " must be configured when cache.storage.type=s3");
         }
     }
 }

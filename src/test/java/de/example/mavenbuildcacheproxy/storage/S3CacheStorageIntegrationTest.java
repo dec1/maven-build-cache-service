@@ -1,6 +1,5 @@
 package de.example.mavenbuildcacheproxy.storage;
 
-import de.example.mavenbuildcacheproxy.config.LocalStackEndpoint;
 import de.example.mavenbuildcacheproxy.testsupport.TestResultReporter;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;

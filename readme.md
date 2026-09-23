@@ -4,6 +4,8 @@ Small Java HTTP service intended to act as a gateway between the Maven Build Cac
 
 The project is being implemented incrementally. The current state is **Chunk 1**: the HTTP service and storage abstraction, using an in-memory storage implementation.
 
+_See also: [readme-dev](readme-dev.md)_
+
 ## Current architecture
 
 ```text
@@ -120,3 +122,5 @@ Not yet included:
 * production service Docker image
 * Maven Build Cache test client
 * AWS deployment
+
+

@@ -12,11 +12,12 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3ClientBuilder;
 
 /**
- * Builds the AWS SDK S3 client when S3 is selected as the storage backend.
+ * Creates the AWS S3 client when S3 storage is enabled.
  *
- * <p>There is no LocalStack-specific branch in application logic. LocalStack is represented only
- * by normal S3 configuration: an endpoint override plus test credentials. Omitting the endpoint and
- * credentials makes the same code suitable for real AWS with the SDK default credential chain.</p>
+ * The region is always required.
+ * A custom endpoint can be set for LocalStack or another S3-compatible service.
+ * If access and secret keys are configured, those are used; otherwise the AWS SDK uses its normal
+ * credential lookup.
  */
 @Configuration
 @ConditionalOnProperty(name = "cache.storage.type", havingValue = "s3")

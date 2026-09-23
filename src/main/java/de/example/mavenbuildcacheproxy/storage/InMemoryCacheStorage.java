@@ -9,11 +9,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
- * Simple process-local storage used by default for development and the controller tests.
+ * Stores cache entries in memory inside the running application.
  *
- * <p>It remains available after introducing S3 so Chunk-1 behaviour can still be exercised
- * without Docker or AWS configuration. Set {@code cache.storage.type=s3} to select the S3
- * implementation instead.</p>
+ * Data is lost when the process stops.
+ * This implementation is used by default unless S3 storage is selected.
  */
 @Component
 @ConditionalOnProperty(name = "cache.storage.type", havingValue = "memory", matchIfMissing = true)

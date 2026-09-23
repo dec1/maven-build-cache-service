@@ -10,6 +10,14 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * Exposes the cache over HTTP.
+ *
+ * PUT /cache/{key} stores the request body under that key.
+ * GET /cache/{key} returns the stored bytes, or 404 if the key does not exist.
+ *
+ * The controller does not know whether the data is stored in memory, S3, or another backend.
+ */
 @RestController
 @RequestMapping("/cache")
 public class CacheController {

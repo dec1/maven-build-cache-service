@@ -16,7 +16,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Tests the controller together with the configured in-memory storage.
+ * Tests the controller together with the configured (see application.properties) in-memory storage.
  *
  * MockMvc simulates incoming HTTP requests inside Spring, so no real TCP server or socket is used.
  * The controller, request mapping, request/response bodies, status codes and storage calls are real.
@@ -68,5 +68,6 @@ class CacheControllerTest {
     void getUnknownObjectReturns404() throws Exception {
         mockMvc.perform(get("/cache/does/not/exist"))
                 .andExpect(status().isNotFound());
+
     }
 }

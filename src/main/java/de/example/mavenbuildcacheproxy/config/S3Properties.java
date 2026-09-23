@@ -5,11 +5,12 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import java.net.URI;
 
 /**
- * External configuration for the S3-backed cache storage.
+ * Holds the S3 settings read from application.properties or environment variables.
  *
- * <p>The endpoint and static credentials are optional. A custom endpoint is useful for LocalStack;
- * when it is absent, the AWS SDK uses the normal AWS S3 endpoint for the configured region. When
- * static credentials are absent, the AWS SDK default credential provider chain is used.</p>
+ * Bucket and region are required when S3 storage is enabled.
+ * Endpoint is optional and is normally only set for LocalStack or another S3-compatible service.
+ * Access and secret keys are optional; if they are omitted, the AWS SDK uses its normal credential
+ * lookup.
  */
 @ConfigurationProperties(prefix = "cache.storage.s3")
 public class S3Properties {

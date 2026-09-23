@@ -15,10 +15,11 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
 import java.util.Optional;
 
 /**
- * {@link CacheStorage} implementation backed by S3 through the AWS SDK for Java v2.
+ * Stores cache entries as S3 objects.
  *
- * <p>The class contains no LocalStack-specific behaviour. It receives a normal {@link S3Client},
- * which may point either at LocalStack through an endpoint override or at Amazon S3.</p>
+ * Each cache key becomes the S3 object key in the configured bucket.
+ * The supplied S3 client decides whether requests go to Amazon S3, LocalStack, or another
+ * S3-compatible endpoint.
  */
 @Component
 @ConditionalOnProperty(name = "cache.storage.type", havingValue = "s3")

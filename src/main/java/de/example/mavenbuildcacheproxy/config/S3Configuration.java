@@ -31,12 +31,12 @@ public class S3Configuration {
                 .region(Region.of(properties.getRegion()));
 
         if (properties.getBackend() == S3Properties.Backend.LOCALSTACK) {
-            if (properties.getLocalstackEndpoint() == null) {
+            if (properties.getLocalStackEndpoint() == null) {
                 throw new IllegalStateException(
                         "cache.storage.s3.localstack-endpoint must be configured when cache.storage.s3.backend=localstack");
             }
 
-            builder.endpointOverride(properties.getLocalstackEndpoint())
+            builder.endpointOverride(properties.getLocalStackEndpoint())
                     .credentialsProvider(StaticCredentialsProvider.create(
                             AwsBasicCredentials.create("test", "test")));
         } else {

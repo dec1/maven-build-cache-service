@@ -37,11 +37,11 @@ docker compose exec dev mvn spring-boot:run
 ####
 Service:
 
-```text
-http://localhost:8080
-
-http://localhost:8080/swagger-ui/index.html  (Swagger-Ui/OpenApi)
-```
+-   ```text
+    http://localhost:8080
+    
+    http://localhost:8080/swagger-ui/index.html  (Swagger-Ui/OpenApi)
+    ```
 
 
 
@@ -146,6 +146,11 @@ docker compose exec dev mvn verify
 ```
 
 This runs the Maven lifecycle through `verify`: compile, test compilation, tests, packaging, and any additional verification steps configured in `pom.xml`.
+
+### 3.4 Clean Rebuild and Test
+```bash
+docker compose down -v --remove-orphans && docker compose build --no-cache dev && docker compose up -d dev && docker compose exec dev mvn clean test
+```
 
 ---
 

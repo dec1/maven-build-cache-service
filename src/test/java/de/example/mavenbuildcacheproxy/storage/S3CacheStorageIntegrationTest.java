@@ -9,10 +9,6 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.Primary;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.localstack.LocalStackContainer;
@@ -20,8 +16,6 @@ import org.testcontainers.utility.DockerImageName;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
-
-import java.net.URI;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -31,10 +25,13 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Spring creates S3CacheStorage and its S3Client through the same configuration used by the
  * application. The tests call the storage class directly, without the HTTP controller.
  */
-@SpringBootTest
+@SpringBootTest(properties = {
+        "cache.storage.type=s3",
+        "cache.storage.s3.backend=localstack",
+        "cache.storage.s3.bucket=maven-build-cache-test"
+})
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(TestResultReporter.class)
-@Import(S3CacheStorageIntegrationTest.TestLocalStackEndpointConfiguration.class)
 class S3CacheStorageIntegrationTest {
 
     private static final DockerImageName LOCALSTACK_IMAGE =
@@ -46,6 +43,10 @@ class S3CacheStorageIntegrationTest {
             .withServices("s3");
 
     static {
+        /*
+         * Spring needs the LocalStack endpoint while creating the application context.
+         * Start the container first so getEndpoint() can return its mapped address.
+         */
         LOCALSTACK.start();
     }
 
@@ -55,31 +56,16 @@ class S3CacheStorageIntegrationTest {
     @Autowired
     private S3CacheStorage storage;
 
+    /**
+     * Supplies the LocalStack values that are dynamic for this test run.
+     *
+     * The test container chooses its own mapped endpoint, so this does not depend on the
+     * LocalStack endpoint configured for normal local application runs.
+     */
     @DynamicPropertySource
     static void configureS3(DynamicPropertyRegistry registry) {
-        registry.add("cache.storage.type", () -> "s3");
-        registry.add("cache.storage.s3.backend", () -> "localstack");
-        registry.add("cache.storage.s3.bucket", () -> BUCKET);
         registry.add("cache.storage.s3.region", LOCALSTACK::getRegion);
-    }
-
-    /**
-     * Testcontainers uses a dynamic LocalStack address.
-     * The application S3 configuration remains unchanged; only the LocalStack address is replaced.
-     */
-    @TestConfiguration(proxyBeanMethods = false)
-    static class TestLocalStackEndpointConfiguration {
-
-        @Bean
-        @Primary
-        LocalStackEndpoint testLocalStackEndpoint() {
-            return new LocalStackEndpoint() {
-                @Override
-                public URI get() {
-                    return LOCALSTACK.getEndpoint();
-                }
-            };
-        }
+        registry.add("cache.storage.s3.localstack-endpoint", LOCALSTACK::getEndpoint);
     }
 
     @BeforeAll

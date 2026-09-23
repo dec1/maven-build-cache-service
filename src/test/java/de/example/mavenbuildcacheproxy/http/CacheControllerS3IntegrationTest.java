@@ -9,11 +9,7 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -23,7 +19,6 @@ import org.testcontainers.utility.DockerImageName;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 
-import java.net.URI;
 import java.util.Random;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -49,7 +44,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(TestResultReporter.class)
-@Import(CacheControllerS3IntegrationTest.TestLocalStackEndpointConfiguration.class)
 class CacheControllerS3IntegrationTest {
 
     private static final DockerImageName LOCALSTACK_IMAGE =
@@ -62,8 +56,8 @@ class CacheControllerS3IntegrationTest {
 
     static {
         /*
-         * Spring needs the LocalStack address while creating the S3 client.
-         * Start the test container first so getEndpoint() can return its mapped address.
+         * Spring needs the LocalStack endpoint while creating the application context.
+         * Start the container first so getEndpoint() can return its mapped address.
          */
         LOCALSTACK.start();
     }
@@ -75,31 +69,15 @@ class CacheControllerS3IntegrationTest {
     private S3Client s3Client;
 
     /**
-     * Supplies the region of the LocalStack container started for this test.
+     * Supplies the LocalStack values that are dynamic for this test run.
+     *
+     * The test container chooses its own mapped endpoint, so this does not depend on the
+     * LocalStack endpoint configured for normal local application runs.
      */
     @DynamicPropertySource
     static void configureS3(DynamicPropertyRegistry registry) {
         registry.add("cache.storage.s3.region", LOCALSTACK::getRegion);
-    }
-
-    /**
-     * Testcontainers maps LocalStack to a dynamic address instead of the fixed Docker Compose
-     * address used by normal local runs. Only that address is replaced here; S3Configuration still
-     * creates the application's S3Client exactly as it does outside the test.
-     */
-    @TestConfiguration(proxyBeanMethods = false)
-    static class TestLocalStackEndpointConfiguration {
-
-        @Bean
-        @Primary
-        LocalStackEndpoint testLocalStackEndpoint() {
-            return new LocalStackEndpoint() {
-                @Override
-                public URI get() {
-                    return LOCALSTACK.getEndpoint();
-                }
-            };
-        }
+        registry.add("cache.storage.s3.localstack-endpoint", LOCALSTACK::getEndpoint);
     }
 
     @BeforeAll

@@ -2,11 +2,13 @@ package de.example.mavenbuildcacheproxy.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import java.net.URI;
+
 /**
  * Holds the S3 settings used by the application.
  *
  * Bucket and region are required when S3 storage is enabled.
- * Backend selects either Amazon S3 or the local LocalStack service.
+ * Backend selects either Amazon S3 or LocalStack.
  */
 @ConfigurationProperties(prefix = "cache.storage.s3")
 public class S3Properties {
@@ -19,6 +21,7 @@ public class S3Properties {
     private Backend backend = Backend.AWS;
     private String bucket;
     private String region;
+    private URI localStackEndpoint;
 
     public Backend getBackend() {
         return backend;
@@ -42,5 +45,13 @@ public class S3Properties {
 
     public void setRegion(String region) {
         this.region = region;
+    }
+
+    public URI getLocalStackEndpoint() {
+        return localStackEndpoint;
+    }
+
+    public void setLocalStackEndpoint(URI localStackEndpoint) {
+        this.localStackEndpoint = localStackEndpoint;
     }
 }

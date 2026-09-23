@@ -12,5 +12,12 @@ services:
       - "8080:8080"
       - "5005:5005"
 
+  localstack:
+    image: localstack/localstack:4.14.0
+    environment:
+      SERVICES: s3
+    ports:
+      - "4566:4566"
+
 volumes:
   maven-cache:

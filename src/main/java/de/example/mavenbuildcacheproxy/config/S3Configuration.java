@@ -12,12 +12,10 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3ClientBuilder;
 
 /**
- * Creates the AWS S3 client when S3 storage is enabled.
+ * Creates the S3 client when S3 storage is enabled.
  *
- * The region is always required.
- * A custom endpoint can be set for LocalStack or another S3-compatible service.
- * If access and secret keys are configured, those are used; otherwise the AWS SDK uses its normal
- * credential lookup.
+ * With backend=aws, the AWS SDK uses the normal Amazon S3 endpoint and normal AWS credentials.
+ * With backend=localstack, the client uses the local LocalStack endpoint and dummy credentials.
  */
 @Configuration
 @ConditionalOnProperty(name = "cache.storage.type", havingValue = "s3")
@@ -25,28 +23,17 @@ import software.amazon.awssdk.services.s3.S3ClientBuilder;
 public class S3Configuration {
 
     @Bean
-    public S3Client s3Client(S3Properties properties) {
+    public S3Client s3Client(S3Properties properties, LocalStackEndpoint localStackEndpoint) {
         requireText(properties.getRegion(), "cache.storage.s3.region");
         requireText(properties.getBucket(), "cache.storage.s3.bucket");
 
         S3ClientBuilder builder = S3Client.builder()
                 .region(Region.of(properties.getRegion()));
 
-        if (properties.getEndpoint() != null) {
-            builder.endpointOverride(properties.getEndpoint());
-        }
-
-        boolean hasAccessKey = hasText(properties.getAccessKey());
-        boolean hasSecretKey = hasText(properties.getSecretKey());
-
-        if (hasAccessKey != hasSecretKey) {
-            throw new IllegalStateException(
-                    "cache.storage.s3.access-key and cache.storage.s3.secret-key must either both be set or both be omitted");
-        }
-
-        if (hasAccessKey) {
-            builder.credentialsProvider(StaticCredentialsProvider.create(
-                    AwsBasicCredentials.create(properties.getAccessKey(), properties.getSecretKey())));
+        if (properties.getBackend() == S3Properties.Backend.LOCALSTACK) {
+            builder.endpointOverride(localStackEndpoint.get())
+                    .credentialsProvider(StaticCredentialsProvider.create(
+                            AwsBasicCredentials.create("test", "test")));
         } else {
             builder.credentialsProvider(DefaultCredentialsProvider.create());
         }
@@ -55,12 +42,8 @@ public class S3Configuration {
     }
 
     private static void requireText(String value, String propertyName) {
-        if (!hasText(value)) {
+        if (value == null || value.isBlank()) {
             throw new IllegalStateException(propertyName + " must be configured when cache.storage.type=s3");
         }
-    }
-
-    private static boolean hasText(String value) {
-        return value != null && !value.isBlank();
     }
 }

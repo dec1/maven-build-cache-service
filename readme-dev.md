@@ -32,11 +32,18 @@ Keep the `dev` container running while working.
 docker compose exec dev mvn spring-boot:run
 ```
 
+
+
+####
 Service:
 
 ```text
 http://localhost:8080
+
+http://localhost:8080/swagger-ui/index.html  (Swagger-Ui/OpenApi)
 ```
+
+
 
 Stop with `Ctrl+C`.
 

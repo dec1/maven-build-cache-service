@@ -4,10 +4,23 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * Unit tests for {@link InMemoryCacheStorage} only.
+ *
+ * <p>These tests exercise the storage implementation directly, without Spring, HTTP, Docker,
+ * LocalStack or S3. Their purpose is to define the behaviour expected from the temporary
+ * in-memory implementation used in Chunk 1.</p>
+ *
+ * <p>They do not prove anything about persistence across process restarts, S3 semantics,
+ * networking, concurrent access, or Maven Build Cache compatibility.</p>
+ */
 class InMemoryCacheStorageTest {
 
     private final InMemoryCacheStorage storage = new InMemoryCacheStorage();
 
+    /**
+     * Verifies that arbitrary binary data can be stored under a key and retrieved unchanged.
+     */
     @Test
     void storesAndRetrievesBinaryContent() {
         byte[] content = {0x00, 0x01, (byte) 0xff, 0x42};
@@ -18,11 +31,20 @@ class InMemoryCacheStorageTest {
                 .hasValue(content);
     }
 
+    /**
+     * Verifies that a key that has never been stored is represented by Optional.empty().
+     */
     @Test
     void returnsEmptyForUnknownKey() {
         assertThat(storage.get("missing")).isEmpty();
     }
 
+    /**
+     * Verifies that callers cannot mutate stored data indirectly through byte-array references.
+     *
+     * <p>The storage must copy data both when accepting it and when returning it. Otherwise a
+     * caller could change cached content without performing another put operation.</p>
+     */
     @Test
     void doesNotExposeMutableStoredArray() {
         byte[] original = {1, 2, 3};

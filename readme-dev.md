@@ -1,306 +1,212 @@
-# Development Environment
+# Development Runbook
 
-This setup keeps the project-specific JDK and Maven inside Docker.
+## 1. Initialize development environment
 
-## Host requirements
-
-Only these are required on the host:
-
-* Docker with Docker Compose
-* IntelliJ IDEA
-
-A host JDK is optional. IntelliJ can use it for local code analysis if already installed, but Maven builds and tests run inside Docker.
-
-The development container uses:
-
-* Java 25 (Eclipse Temurin)
-* Maven 3.9.16
-
-`Eclipse Temurin` is a JDK distribution. It does not mean you are using the Eclipse IDE.
-
-## Project files
-
-The relevant files are in the project root:
-
-```text
-project/
-├── pom.xml
-├── Dockerfile.dev
-├── compose.yaml
-├── .dockerignore
-└── src/
-```
-
-## Start the development container
-
-From the project root:
+Run after checkout, or after changing `Dockerfile.dev`:
 
 ```bash
 docker compose up -d --build dev
 ```
 
-Check the tools inside it:
+Check tools:
 
 ```bash
 docker compose exec dev java -version
 docker compose exec dev mvn -version
 ```
 
-Normally this container stays running while you work.
+Keep the `dev` container running while working.
 
-## Development workflow
+---
 
-The project directory is bind-mounted into `/workspace`.
+## 2. Run application
 
-Changes made in IntelliJ are therefore immediately visible inside the container.
-
-Changing Java source code does **not** require rebuilding the Docker image.
-
-```text
-Changed Java source code?
-|
-+-- Want to run the tests?
-|   |
-|   +--> docker compose exec dev mvn test
-|
-+-- Want to run the application normally?
-|   |
-|   +--> Stop an already-running instance with Ctrl+C
-|   |
-|   +--> docker compose exec dev mvn spring-boot:run
-|
-+-- Want to debug with IntelliJ breakpoints?
-    |
-    +--> Stop an already-running instance with Ctrl+C
-    |
-    +--> Start Spring Boot with remote debugging:
-         docker compose exec dev mvn spring-boot:run \
-           '-Dspring-boot.run.jvmArguments=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005'
-    |
-    +--> Start the IntelliJ "Remote JVM Debug" configuration
-         Host: localhost
-         Port: 5005
-```
-
-Maven automatically recompiles source files that have changed.
-
-## Run tests
-
-For the normal edit/test cycle:
-
-```bash
-docker compose exec dev mvn test
-```
-
-This:
-
-```text
-compiles main source
-    ↓
-compiles test source
-    ↓
-runs the tests
-```
-
-Use this after normal source-code changes.
-
-## Full project verification
-
-For a more complete project check:
-
-```bash
-docker compose exec dev mvn verify
-```
-
-This runs the Maven lifecycle through the `verify` phase:
-
-```text
-compile
-    ↓
-compile tests
-    ↓
-run tests
-    ↓
-package application
-    ↓
-run additional verification steps configured in pom.xml
-```
-
-Use `mvn test` during normal development.
-
-Use `mvn verify` before considering a chunk or change complete.
-
-Later, integration tests such as the LocalStack tests may also be attached to the verification lifecycle.
-
-## Run the application normally
-
-Start the service with:
+### 2.1 Normally
 
 ```bash
 docker compose exec dev mvn spring-boot:run
 ```
 
-The service is then available at:
+Service:
 
 ```text
 http://localhost:8080
 ```
 
-Stop it with:
+Stop with `Ctrl+C`.
 
-```text
-Ctrl+C
+If the next start reports that port `8080` is already in use:
+
+```bash
+docker compose restart dev
 ```
 
-The development container itself remains running.
+Then repeat **2.1**.
 
-After changing source code, restart `spring-boot:run` to run the changed application.
+### 2.2 With IntelliJ debugger
 
-## Run with IntelliJ remote debugging
-
-Start Spring Boot inside the container with JVM debugging enabled:
+Start the application with remote debugging enabled:
 
 ```bash
 docker compose exec dev mvn spring-boot:run \
   '-Dspring-boot.run.jvmArguments=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005'
 ```
 
-Then configure IntelliJ:
-
-1. Open **Run -> Edit Configurations**.
-2. Click **+**.
-3. Choose **Remote JVM Debug**.
-4. Set:
+Then in IntelliJ start the existing **Remote JVM Debug** configuration:
 
 ```text
 Host: localhost
 Port: 5005
 ```
 
-5. Save the configuration.
-6. Start the Spring Boot command above.
-7. Start the IntelliJ Remote JVM Debug configuration.
-8. Set and use breakpoints normally.
+Set breakpoints in the Java source normally.
 
-IntelliJ and the container see the same source files because the project directory is bind-mounted into `/workspace`.
-
-If you want the JVM to wait for IntelliJ before executing application code, change:
-
-```text
-suspend=n
-```
-
-to:
-
-```text
-suspend=y
-```
-
-After changing source code, stop the running application and restart the debug-enabled `spring-boot:run` command.
-
-## Manual GET/PUT check
-
-With the application running:
+If port `8080` is still occupied:
 
 ```bash
-curl -i -X PUT \
-  -H 'Content-Type: application/octet-stream' \
-  --data-binary 'hello-cache' \
-  http://localhost:8080/cache/com/example/demo/hash/data
+docker compose restart dev
 ```
 
-Then:
+Then repeat **2.2**.
 
-```bash
-curl -i \
-  http://localhost:8080/cache/com/example/demo/hash/data
-```
+---
 
-The response body should contain:
+## 3. Run tests
 
-```text
-hello-cache
-```
+### 3.1 Quick test run
 
-## Other file changes
-
-### Changed `pom.xml`
-
-No Docker image rebuild is required.
-
-Run whichever Maven command you need:
+Use during normal development:
 
 ```bash
 docker compose exec dev mvn test
 ```
 
-or:
+This compiles changed source/test code and runs the tests.
+
+### 3.2 Debug tests with IntelliJ breakpoints
+
+Make sure no application/debug session is currently using port `5005`.
+
+Start the test JVM suspended and waiting for IntelliJ:
+
+```bash
+docker compose exec dev mvn \
+  '-Dmaven.surefire.debug=-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5005' \
+  test
+```
+
+Maven will pause before executing the tests.
+
+Then in IntelliJ:
+
+```text
+1. Set breakpoint(s) in the test or production Java code.
+2. Start the existing Remote JVM Debug configuration.
+   Host: localhost
+   Port: 5005
+3. The tests continue and stop at matching breakpoints.
+```
+
+To debug only one test class:
+
+```bash
+docker compose exec dev mvn \
+  -Dtest=CacheControllerTest \
+  '-Dmaven.surefire.debug=-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5005' \
+  test
+```
+
+To debug one test method:
+
+```bash
+docker compose exec dev mvn \
+  '-Dtest=CacheControllerTest#putThenGetRoundTripPreservesBinaryContent' \
+  '-Dmaven.surefire.debug=-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5005' \
+  test
+```
+
+### 3.3 Full Maven verification
+
+Use before considering a change/chunk complete:
 
 ```bash
 docker compose exec dev mvn verify
 ```
 
-or:
+This runs the Maven lifecycle through `verify`: compile, test compilation, tests, packaging, and any additional verification steps configured in `pom.xml`.
 
-```bash
-docker compose exec dev mvn spring-boot:run
+---
+
+## 4. After editing files
+
+### 4.1 Changed Java source
+
+No Docker rebuild required.
+
+```text
+run normally       -> 2.1
+debug application  -> 2.2
+run tests          -> 3.1
+debug tests        -> 3.2
+full verification  -> 3.3
 ```
 
-Maven resolves changed dependencies automatically.
+### 4.2 Changed `pom.xml`
 
-### Changed `Dockerfile.dev`
+No Docker rebuild required. Maven resolves changed dependencies automatically.
 
-Rebuild the development image:
+```text
+run normally       -> 2.1
+debug application  -> 2.2
+run tests          -> 3.1
+debug tests        -> 3.2
+full verification  -> 3.3
+```
+
+### 4.3 Changed `Dockerfile.dev`
 
 ```bash
 docker compose up -d --build dev
 ```
 
-### Changed `compose.yaml`
+Then continue from **2** or **3**.
 
-Recreate/update the development container:
+### 4.4 Changed `compose.yaml`
 
 ```bash
 docker compose up -d dev
 ```
 
-## Stop the development environment
+Then continue from **2** or **3**.
 
-Stop and remove the development container:
+---
+
+## 5. Cleanup
+
+Normal Java or `pom.xml` changes do **not** require cleanup.
+
+Stop/remove the development container when you want to tear down the environment:
 
 ```bash
 docker compose down
 ```
 
-The Maven dependency cache is retained in the Docker named volume `maven-cache`.
+The Maven cache is retained.
 
-To remove that cache as well:
+To also delete the Maven cache:
 
 ```bash
 docker compose down -v
 ```
 
-## Typical daily workflow
+After `docker compose down`:
 
-```text
-Start once:
-    docker compose up -d dev
-
-Edit:
-    IntelliJ
-
-Quick test:
-    docker compose exec dev mvn test
-
-Run normally:
-    docker compose exec dev mvn spring-boot:run
-
-Or debug:
-    start Spring Boot with JDWP on port 5005
-    then attach IntelliJ Remote JVM Debug
-
-Before considering the work complete:
-    docker compose exec dev mvn verify
+```bash
+docker compose up -d dev
 ```
 
-No Maven installation is required on the host.
+If `Dockerfile.dev` changed:
+
+```bash
+docker compose up -d --build dev
+```

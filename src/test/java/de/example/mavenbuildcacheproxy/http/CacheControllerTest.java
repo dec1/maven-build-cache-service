@@ -11,6 +11,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.head;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -68,6 +69,38 @@ class CacheControllerTest {
     void getUnknownObjectReturns404() throws Exception {
         mockMvc.perform(get("/cache/does/not/exist"))
                 .andExpect(status().isNotFound());
+    }
 
+    /**
+     * Stores a key, then sends HEAD /cache/... for it.
+     *
+     * Passing proves that an existing storage key is translated to HTTP 200 without returning
+     * the stored body.
+     */
+    @Test
+    @DisplayName("HTTP: HEAD returns 200 for existing cache key")
+    void headExistingObjectReturns200() throws Exception {
+        String path = "/cache/com/example/demo/hash/head-existing";
+
+        mockMvc.perform(put(path)
+                        .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                        .content(new byte[]{1, 2, 3}))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(head(path))
+                .andExpect(status().isOk())
+                .andExpect(content().bytes(new byte[0]));
+    }
+
+    /**
+     * Sends HEAD /cache/... for a key that is not present in storage.
+     *
+     * Passing proves that a missing storage key is translated to HTTP 404.
+     */
+    @Test
+    @DisplayName("HTTP: HEAD returns 404 for missing cache key")
+    void headUnknownObjectReturns404() throws Exception {
+        mockMvc.perform(head("/cache/does/not/exist"))
+                .andExpect(status().isNotFound());
     }
 }

@@ -118,4 +118,18 @@ class S3CacheStorageIntegrationTest {
     void getReturnsEmptyForMissingObject() {
         assertThat(storage.get("does/not/exist")).isEmpty();
     }
+
+    /**
+     * Checks one stored S3 object and one missing key without downloading either object's contents.
+     *
+     * Passing proves that exists() uses S3 object metadata to distinguish present and missing keys.
+     */
+    @Test
+    @DisplayName("S3: existence check distinguishes stored and missing objects")
+    void existenceCheckDistinguishesStoredAndMissingObjects() {
+        storage.put("present", new byte[]{1});
+
+        assertThat(storage.exists("present")).isTrue();
+        assertThat(storage.exists("missing")).isFalse();
+    }
 }

@@ -18,4 +18,9 @@ public interface CacheStorage {
      * Returns the stored bytes, or Optional.empty() if the key does not exist.
      */
     Optional<byte[]> get(String key);
+
+    /**
+     * Returns whether the key exists without retrieving its contents.
+     */
+    boolean exists(String key);
 }

@@ -32,4 +32,9 @@ public class InMemoryCacheStorage implements CacheStorage {
                 ? Optional.empty()
                 : Optional.of(Arrays.copyOf(content, content.length));
     }
+
+    @Override
+    public boolean exists(String key) {
+        return objects.containsKey(key);
+    }
 }

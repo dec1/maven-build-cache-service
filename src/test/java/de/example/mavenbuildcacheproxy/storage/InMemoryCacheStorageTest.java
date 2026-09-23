@@ -13,8 +13,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  * No Spring context, controller, HTTP handling, Docker or S3 is involved.
  *
  * These tests prove the storage rules expected by callers:
- * stored bytes are preserved, missing keys return empty, and callers cannot change stored data
- * by modifying byte arrays they previously passed in or received back.
+ * stored bytes are preserved, missing keys return empty, existence checks are correct, and callers
+ * cannot change stored data by modifying byte arrays they previously passed in or received back.
  */
 @ExtendWith(TestResultReporter.class)
 class InMemoryCacheStorageTest {
@@ -46,6 +46,20 @@ class InMemoryCacheStorageTest {
     @DisplayName("Memory storage: unknown key returns empty")
     void returnsEmptyForUnknownKey() {
         assertThat(storage.get("missing")).isEmpty();
+    }
+
+    /**
+     * Checks one stored key and one missing key without retrieving their contents.
+     *
+     * Passing proves that exists() reports whether the key is present.
+     */
+    @Test
+    @DisplayName("Memory storage: existence check distinguishes stored and missing keys")
+    void existenceCheckDistinguishesStoredAndMissingKeys() {
+        storage.put("present", new byte[]{1});
+
+        assertThat(storage.exists("present")).isTrue();
+        assertThat(storage.exists("missing")).isFalse();
     }
 
     /**

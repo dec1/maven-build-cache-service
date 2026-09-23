@@ -8,6 +8,7 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
@@ -58,6 +59,26 @@ public class S3CacheStorage implements CacheStorage {
         } catch (S3Exception e) {
             if (e.statusCode() == 404) {
                 return Optional.empty();
+            }
+            throw e;
+        }
+    }
+
+    @Override
+    public boolean exists(String key) {
+        HeadObjectRequest request = HeadObjectRequest.builder()
+                .bucket(bucket)
+                .key(key)
+                .build();
+
+        try {
+            s3Client.headObject(request);
+            return true;
+        } catch (NoSuchKeyException e) {
+            return false;
+        } catch (S3Exception e) {
+            if (e.statusCode() == 404) {
+                return false;
             }
             throw e;
         }

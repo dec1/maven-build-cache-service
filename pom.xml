@@ -21,12 +21,19 @@
         <java.version>25</java.version>
         <aws.sdk.version>2.54.17</aws.sdk.version>
         <testcontainers.version>2.0.5</testcontainers.version>
+        <springdoc.version>3.1.1</springdoc.version>
     </properties>
 
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webmvc</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>${springdoc.version}</version>
         </dependency>
 
         <dependency>

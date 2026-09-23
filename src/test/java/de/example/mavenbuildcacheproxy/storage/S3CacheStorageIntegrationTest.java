@@ -1,8 +1,11 @@
 package de.example.mavenbuildcacheproxy.storage;
 
 import de.example.mavenbuildcacheproxy.config.S3Properties;
+import de.example.mavenbuildcacheproxy.testsupport.TestResultReporter;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.localstack.LocalStackContainer;
@@ -28,11 +31,13 @@ import static org.assertj.core.api.Assertions.assertThat;
  * {@code CacheControllerTest}.</p>
  */
 @Testcontainers
+@ExtendWith(TestResultReporter.class)
 class S3CacheStorageIntegrationTest {
 
     /**
      * Pinned deliberately rather than using {@code latest}: newer LocalStack releases require
-     * account authentication even for the free tier. Chunk 2 only needs basic S3 PUT/GET support.
+     * account authentication even for the free tier, while these tests only need basic S3
+     * PUT/GET support.
      */
     private static final DockerImageName LOCALSTACK_IMAGE =
             DockerImageName.parse("localstack/localstack:4.14.0");
@@ -72,6 +77,7 @@ class S3CacheStorageIntegrationTest {
      * pass.</p>
      */
     @Test
+    @DisplayName("S3: PUT stores exact bytes in S3")
     void putStoresExactObjectInS3() {
         String key = "group/artifact/hash/put-object";
         byte[] content = {0x00, 0x01, (byte) 0xff, 0x42};
@@ -91,6 +97,7 @@ class S3CacheStorageIntegrationTest {
      * Proves that an object written through the adapter can be read back byte-for-byte unchanged.
      */
     @Test
+    @DisplayName("S3: GET retrieves exact bytes")
     void getRetrievesExactObject() {
         String key = "group/artifact/hash/round-trip";
         byte[] content = {10, 20, 30, 0, (byte) 0xff};
@@ -105,6 +112,7 @@ class S3CacheStorageIntegrationTest {
      * {@code Optional.empty()} result rather than leaking an S3 exception to the caller.
      */
     @Test
+    @DisplayName("S3: missing object returns empty")
     void getReturnsEmptyForMissingObject() {
         assertThat(storage.get("does/not/exist")).isEmpty();
     }

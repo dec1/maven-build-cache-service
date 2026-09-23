@@ -1,6 +1,6 @@
 # S3 / LocalStack development and integration tests
 
-This file documents Chunk 2: the S3-backed `CacheStorage` implementation and its automated LocalStack integration tests.
+This file documents the S3-backed `CacheStorage` implementation and its automated LocalStack integration tests.
 
 ## Storage selection
 
@@ -61,7 +61,7 @@ unset CACHE_STORAGE_S3_SECRET_KEY
 
 The AWS SDK then uses the normal Amazon S3 endpoint and its default credential provider chain, for example a workload IAM role.
 
-Actual AWS deployment remains out of scope for Chunk 2.
+AWS deployment is not covered by this document.
 
 ## Automated LocalStack integration tests
 
@@ -95,6 +95,23 @@ HTTP/controller
     -> S3-compatible endpoint
 ```
 
+## Test output
+
+The tests use human-readable JUnit display names and a small test-only reporter so the normal Maven output shows each tested behaviour explicitly, for example:
+
+```text
+[TEST] PASS  HTTP: PUT then GET preserves binary content
+[TEST] PASS  HTTP: unknown cache key returns 404
+[TEST] PASS  Memory storage: stores and retrieves binary content
+[TEST] PASS  Memory storage: unknown key returns empty
+[TEST] PASS  Memory storage: stored data cannot be mutated through array references
+[TEST] PASS  S3: PUT stores exact bytes in S3
+[TEST] PASS  S3: GET retrieves exact bytes
+[TEST] PASS  S3: missing object returns empty
+```
+
+Maven/Surefire still prints its normal aggregate summary as well.
+
 ## Running the tests
 
 ### Maven on the host
@@ -111,7 +128,7 @@ No LocalStack process, installation, account, token, endpoint variable or AWS cr
 
 ### Maven inside the development container
 
-Your normal command is:
+The normal command is:
 
 ```bash
 docker compose exec dev mvn test
@@ -119,12 +136,14 @@ docker compose exec dev mvn test
 
 In this case Testcontainers itself runs inside the `dev` container, but it must still be able to ask Docker to start the separate LocalStack container.
 
-The `dev` service therefore needs access to a Docker daemon. With the common host-socket setup, that means the service has this mount:
+The `dev` service therefore needs access to a Docker daemon. With the host-socket setup used by this project, `compose.yaml` contains:
 
 ```yaml
 services:
   dev:
     volumes:
+      - .:/workspace
+      - maven-cache:/root/.m2
       - /var/run/docker.sock:/var/run/docker.sock
 ```
 
@@ -138,12 +157,10 @@ dev container
     -> separate LocalStack container
 ```
 
-If `/var/run/docker.sock` is already mounted into `dev`, no Compose change is needed.
-
-After changing the `dev` service definition, recreate it before testing, for example:
+After changing the `dev` service definition, apply the Compose configuration before testing:
 
 ```bash
-docker compose up -d --force-recreate dev
+docker compose up -d dev
 ```
 
 Then run:
@@ -160,6 +177,6 @@ If IntelliJ itself is running on the host, Testcontainers connects to the host D
 
 ## Why LocalStack is pinned
 
-Current LocalStack releases use an authenticated distribution model. Chunk 2 only needs basic S3 PUT/GET semantics, so requiring a LocalStack account and token would add project setup without testing anything additional that this chunk needs.
+Current LocalStack releases use an authenticated distribution model. These tests only need basic S3 PUT/GET semantics, so requiring a LocalStack account and token would add setup without increasing the test coverage needed here.
 
 The tradeoff is that `4.14.0` is intentionally an older fixed test dependency. If future tests need behaviour unavailable there, the LocalStack version/authentication choice should be revisited explicitly rather than silently changing the image tag.

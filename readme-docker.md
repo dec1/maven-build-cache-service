@@ -2,12 +2,14 @@
 
 The commands below differ mainly in whether they **start**, **recreate**, **rebuild**, or **remove** the development container.
 
+`dev` is the name of the development service defined under `services:` in `compose.yaml`; it is not a Docker keyword.
+
 
 - ~~~bash
     docker compose up -d dev
     ~~~
-    Start the existing dev service.
-    Recreates the container if its Compose configuration changed.
+    Ensure the `dev` service exists and is running, based on the current `compose.yaml`.
+    Creates the container if it does not exist, starts it if it is stopped, and recreates it if its Compose configuration changed.
     Does not rebuild the image.
 
 - ~~~bash
@@ -20,9 +22,10 @@ The commands below differ mainly in whether they **start**, **recreate**, **rebu
 - ~~~bash
     docker compose restart dev
     ~~~
-    Restart the existing container in place.
+    Restart the already-created `dev` container in place (whether currently running or stopped).
+    Unlike `up`, this does not create a missing container or apply changed Compose configuration.
     Does not rebuild the image and does not recreate the container.
-    Useful for clearing a stuck Java/Spring process.
+    Useful for clearing a stuck Java/Spring process. After `docker compose down`, use `up` instead because the container has been removed.
 
 -   ~~~bash
     docker compose down
@@ -40,9 +43,9 @@ The commands below differ mainly in whether they **start**, **recreate**, **rebu
 ----
 In short:
 
-- `restart` = restart same container
+- `restart` = restart the same already-created container
 
-- `up` = ensure service/container is running
+- `up` = use `compose.yaml` to ensure the service/container exists and is running
 
     -  `up --build` = rebuild image + ensure service/container is running
 

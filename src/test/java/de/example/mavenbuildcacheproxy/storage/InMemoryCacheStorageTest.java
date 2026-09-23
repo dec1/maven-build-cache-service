@@ -8,9 +8,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests {@link InMemoryCacheStorage} directly.
+ * Tests only the in-memory storage implementation.
  *
- * <p>No HTTP or S3 is involved.</p>
+ * No Spring context, controller, HTTP handling, Docker or S3 is involved.
+ *
+ * These tests prove the storage rules expected by callers:
+ * stored bytes are preserved, missing keys return empty, and callers cannot change stored data
+ * by modifying byte arrays they previously passed in or received back.
  */
 @ExtendWith(TestResultReporter.class)
 class InMemoryCacheStorageTest {
@@ -18,7 +22,9 @@ class InMemoryCacheStorageTest {
     private final InMemoryCacheStorage storage = new InMemoryCacheStorage();
 
     /**
-     * Stored bytes can be read back unchanged.
+     * Stores binary data under one key and reads that key back directly from the in-memory map.
+     *
+     * Passing proves that put/get preserve the bytes exactly.
      */
     @Test
     @DisplayName("Memory storage: stores and retrieves binary content")
@@ -32,7 +38,9 @@ class InMemoryCacheStorageTest {
     }
 
     /**
-     * A missing key returns {@code Optional.empty()}.
+     * Reads a key that has never been stored.
+     *
+     * Passing proves that a missing key is represented by Optional.empty().
      */
     @Test
     @DisplayName("Memory storage: unknown key returns empty")
@@ -41,7 +49,10 @@ class InMemoryCacheStorageTest {
     }
 
     /**
-     * Changing an input or returned byte array must not change the stored value.
+     * Changes both the original input array and an array returned by get().
+     *
+     * Passing proves that the storage keeps its own copies and cannot be modified indirectly
+     * through array references held by callers.
      */
     @Test
     @DisplayName("Memory storage: stored data cannot be mutated through array references")

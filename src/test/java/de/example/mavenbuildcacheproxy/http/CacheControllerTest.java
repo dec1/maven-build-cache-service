@@ -16,10 +16,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Tests the cache HTTP endpoints without starting a real HTTP server.
+ * Tests the controller together with the configured in-memory storage.
  *
- * <p>Requests are sent to the controller through Spring's test support.
- * The configured {@code CacheStorage} is used normally.</p>
+ * MockMvc simulates incoming HTTP requests inside Spring, so no real TCP server or socket is used.
+ * The controller, request mapping, request/response bodies, status codes and storage calls are real.
+ *
+ * These tests therefore prove the application's HTTP behaviour up to the storage boundary,
+ * but not real network transport and not S3.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -30,7 +33,13 @@ class CacheControllerTest {
     private MockMvc mockMvc;
 
     /**
-     * PUT stores binary data and GET returns the same bytes.
+     * Sends PUT /cache/... with binary data, then GETs the same key.
+     *
+     * The PUT goes through the real controller into the configured in-memory storage.
+     * The GET goes through the same path back out again.
+     *
+     * Passing proves that the controller accepts binary data, stores it under the requested key,
+     * returns 204 for PUT, returns 200 for GET, and preserves the bytes exactly.
      */
     @Test
     @DisplayName("HTTP: PUT then GET preserves binary content")
@@ -50,7 +59,9 @@ class CacheControllerTest {
     }
 
     /**
-     * GET returns 404 when the cache key does not exist.
+     * Sends GET /cache/... for a key that is not present in the in-memory storage.
+     *
+     * Passing proves that an empty storage result is translated by the controller to HTTP 404.
      */
     @Test
     @DisplayName("HTTP: unknown cache key returns 404")

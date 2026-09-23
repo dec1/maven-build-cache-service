@@ -20,18 +20,22 @@ import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests {@link S3CacheStorage} against a real S3-compatible service.
+ * Tests the S3 storage implementation against LocalStack S3.
  *
- * <p>The test starts LocalStack in Docker, creates a bucket, runs the storage operations,
- * then removes the LocalStack container.</p>
+ * Testcontainers starts a real LocalStack container and the test creates a real S3 bucket in it.
+ * The S3CacheStorage methods then use the AWS SDK against that bucket.
+ *
+ * No controller or HTTP endpoint is involved here.
+ *
+ * These tests therefore prove the storage adapter's S3 behaviour independently of the HTTP layer.
  */
 @Testcontainers
 @ExtendWith(TestResultReporter.class)
 class S3CacheStorageIntegrationTest {
 
     /**
-     * Fixed version so the test environment does not change unexpectedly.
-     * This version also works without a LocalStack account or auth token.
+     * The LocalStack version is fixed so the test environment does not change unexpectedly.
+     * Version 4.14.0 also works without a LocalStack account or auth token.
      */
     private static final DockerImageName LOCALSTACK_IMAGE =
             DockerImageName.parse("localstack/localstack:4.14.0");
@@ -64,9 +68,11 @@ class S3CacheStorageIntegrationTest {
     }
 
     /**
-     * PUT writes the exact bytes to S3.
+     * Writes bytes through S3CacheStorage.put(), then reads the object directly with the AWS SDK.
      *
-     * <p>The result is read directly with the AWS SDK, not through {@code S3CacheStorage#get()}.</p>
+     * Reading through the SDK avoids using S3CacheStorage.get() to verify S3CacheStorage.put().
+     *
+     * Passing proves that put() creates the expected S3 object with exactly the supplied bytes.
      */
     @Test
     @DisplayName("S3: PUT stores exact bytes in S3")
@@ -86,7 +92,9 @@ class S3CacheStorageIntegrationTest {
     }
 
     /**
-     * GET returns exactly the bytes that were stored.
+     * Writes bytes through S3CacheStorage.put() and reads them back through S3CacheStorage.get().
+     *
+     * Passing proves that an S3 round trip through the storage adapter preserves the bytes exactly.
      */
     @Test
     @DisplayName("S3: GET retrieves exact bytes")
@@ -100,7 +108,10 @@ class S3CacheStorageIntegrationTest {
     }
 
     /**
-     * GET returns {@code Optional.empty()} when the S3 object does not exist.
+     * Reads an S3 key that does not exist.
+     *
+     * Passing proves that S3CacheStorage converts S3's missing-object response to Optional.empty()
+     * instead of exposing the AWS SDK exception to its caller.
      */
     @Test
     @DisplayName("S3: missing object returns empty")

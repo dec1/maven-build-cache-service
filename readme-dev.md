@@ -26,7 +26,7 @@ Keep the `dev` container running while working.
 
 ## 2. Run application
 
-### 2.1 Normally
+### 2.1 Normally     ****
 
 ```bash
 docker compose exec dev mvn spring-boot:run
@@ -41,6 +41,8 @@ Service:
     http://localhost:8080
     
     http://localhost:8080/swagger-ui/index.html  (Swagger-Ui/OpenApi)
+    
+    http://localhost:8080/actuator/health     (health)
     ```
 
 
@@ -85,13 +87,18 @@ Then repeat **2.2**.
 
 ## 3. Run tests
 
-### 3.1 Quick test run
+### 3.1 Quick test run   ***
 
 Use during normal development:
 
 ```bash
 docker compose exec dev mvn test
 ```
+#####
+-  clean rebuild before runnig tests 
+    ```bash
+        docker compose exec dev mvn clean test
+    ```
 
 This compiles changed source/test code and runs the tests.
 

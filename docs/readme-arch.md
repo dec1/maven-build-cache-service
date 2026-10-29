@@ -39,6 +39,8 @@ _Tradeoff_: cache reads and writes require network requests to storage. The curr
 
 Swagger UI: `http://localhost:8080/swagger-ui/index.html`.
 
+![Swagger UI showing the cache GET, PUT and HEAD endpoints](images/swagger-ui.png)
+
 ## Current scope
 
 The tests cover storage directly and HTTP handling through MockMvc, but do not run a Maven Build Cache Extension client or verify real network transport. See [test coverage](readme-dev.md#3-run-tests).

@@ -9,13 +9,13 @@ Run commands from the project root. The application uses in-memory storage by de
 | Host | JDK 25 and Maven | Needed only when running the S3 integration tests or a local LocalStack service |
 | Development container (`dev`) | Docker with Docker Compose | Supplies JDK 25 and Maven without installing them on the host; also runs LocalStack for integration tests |
 
-For the container option, Compose uses `Dockerfile.dev` to build the image and creates a container for the `dev` service defined in `compose.yaml`:
+For the container option, Compose uses `Dockerfile.dev` to build the image and creates a container for the `dev` service defined in `../compose.yaml`:
 
 ```bash
 docker compose up -d --build dev
 ```
 
-Keep `dev` running while working. This starts the tool environment, not the application. The checkout is bind-mounted into it, and Maven dependencies are retained in a named volume. Rebuild after changing `Dockerfile.dev`; see [container lifecycle](readme-docker.md) for other changes and cleanup.
+Keep `dev` running while working. This starts the tool environment, not the application. The checkout is bind-mounted into it, and Maven dependencies are retained in a named volume. Rebuild after changing `Dockerfile.dev`; see [environment changes and cleanup](readme-docker.md) for other changes and cleanup.
 
 ## 2. Run application
 
@@ -34,7 +34,7 @@ The default backend is in-memory. See [S3 configuration](readme-s3.md) to run ag
 | Swagger UI | `http://localhost:8080/swagger-ui/index.html` |
 | Health | `http://localhost:8080/actuator/health` |
 
-Stop with `Ctrl+C`. Rerun the Maven command after Java or `pom.xml` changes. For the container option, the bind mount makes edits visible without rebuilding the image.
+Stop with `Ctrl+C`. Rerun the Maven command after Java or `../pom.xml` changes. For the container option, the bind mount makes edits visible without rebuilding the image.
 
 If a leftover application process occupies port `8080`, stop that process before rerunning Maven. For an application running inside `dev`, `docker compose restart dev` resets the container and its processes.
 

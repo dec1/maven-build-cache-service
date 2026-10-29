@@ -13,11 +13,14 @@ Sharing results requires a backend that stores and serves cache entries. This pr
 
 The application can run with JDK 25 and Maven on the host or through the `dev` service defined in `compose.yaml`. Docker is needed for `dev` and for the S3 integration tests.
 
-1. Start the service using the [application and test commands](readme-dev.md). The default storage is in-memory; use [S3 configuration](readme-s3.md) for Amazon S3 or LocalStack.
-2. [Configure the Maven client](readme-client.md) in the project whose builds should be cached, pointing it at the local or deployed service.
+1. Start the service using the [application and test commands](docs/readme-dev.md). The default storage is in-memory; use [S3 configuration](docs/readme-s3.md) for Amazon S3 or LocalStack.
+2. [Configure the Maven client](docs/readme-client.md) in the project whose builds should be cached, pointing it at the local or deployed service.
 
 ## Reference
 
-* [Architecture, storage choices and HTTP API](readme-arch.md)
-* [Docker container lifecycle](readme-docker.md)
-* [Health and logging](readme-monitoring.md)
+* [Architecture, storage choices and HTTP API](docs/readme-arch.md)
+* [Maven client configuration](docs/readme-client.md)
+* [Running the application and tests](docs/readme-dev.md)
+* [Development environment with Docker Compose](docs/readme-docker.md)
+* [S3 configuration and LocalStack](docs/readme-s3.md)
+* [Health and logging](docs/readme-monitoring.md)

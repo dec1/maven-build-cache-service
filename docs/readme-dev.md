@@ -1,6 +1,30 @@
 # Development Runbook
 
-## 1. Choose where Maven runs
+## Quick start (Docker Compose)
+
+Requires Docker with Docker Compose. The app uses in-memory storage; the full test suite starts its own LocalStack containers.
+
+```bash
+cd maven-build-cache-service
+docker compose up -d --build dev
+docker compose exec dev mvn spring-boot:run
+```
+
+[Open Swagger UI](http://localhost:8080/swagger-ui/index.html) ([screenshot](readme-arch.md#http-api)).
+
+Stop the app with `Ctrl+C`, then run the tests:
+
+```bash
+docker compose exec dev mvn test
+```
+
+After editing Java or `pom.xml`, rerun the app or test command; no image rebuild is needed. When finished, use the [Docker cleanup options](readme-docker.md#cleanup).
+
+---
+
+## Details and alternatives
+
+### 1. Choose where Maven runs
 
 Run commands from the project root. The application uses in-memory storage by default; running it does not require Docker or S3.
 
@@ -17,7 +41,7 @@ docker compose up -d --build dev
 
 Keep `dev` running while working. This starts the tool environment, not the application. The checkout is bind-mounted into it, and Maven dependencies are retained in a named volume. Rebuild after changing `Dockerfile.dev`; see [environment changes and cleanup](readme-docker.md) for other changes and cleanup.
 
-## 2. Run application
+### 2. Run application
 
 Choose the command for your Maven environment:
 
@@ -31,18 +55,18 @@ The default backend is in-memory. See [S3 configuration](readme-s3.md) to run ag
 | Endpoint | URL |
 | --- | --- |
 | Cache API | `http://localhost:8080/cache/{key}` |
-| Swagger UI | `http://localhost:8080/swagger-ui/index.html` |
+| Swagger UI | [Open locally](http://localhost:8080/swagger-ui/index.html) · [Screenshot](readme-arch.md#http-api) |
 | Health | `http://localhost:8080/actuator/health` |
 
 Stop with `Ctrl+C`. Rerun the Maven command after Java or `../pom.xml` changes. For the container option, the bind mount makes edits visible without rebuilding the image.
 
 If a leftover application process occupies port `8080`, stop that process before rerunning Maven. For an application running inside `dev`, `docker compose restart dev` resets the container and its processes.
 
-## 3. Run tests
+### 3. Run tests
 
 Tests start the application components they need; do not start the application separately.
 
-### Full suite (Docker required)
+#### Full suite (Docker required)
 
 | Maven runs in | Command |
 | --- | --- |
@@ -53,7 +77,7 @@ Both commands include the S3 integration tests. Those tests use Testcontainers t
 
 Docker must be running and accessible to the test JVM. For Maven inside `dev`, Compose mounts the host Docker socket so Testcontainers can start sibling containers; LocalStack does not run inside `dev`.
 
-### Tests without Docker
+#### Tests without Docker
 
 With JDK 25 and Maven on the host, run the memory, MockMvc and mocked-health tests only:
 
@@ -65,7 +89,7 @@ This omits the two S3 integration classes. Use the default in-memory configurati
 
 Use `clean test` instead of `test` to discard compiled output first, or `verify` to run through packaging and verification. Without a test selector, `verify` also runs the full suite and needs Docker. None of these commands requires removing containers or the Maven cache.
 
-### Coverage
+#### Coverage
 
 | Tests | Boundary covered |
 | --- | --- |
@@ -75,11 +99,11 @@ Use `clean test` instead of `test` to discard compiled output first, or `verify`
 | `S3CacheStorageIntegrationTest` | Spring-configured storage against LocalStack: PUT/GET and existence checks |
 | `CacheControllerS3IntegrationTest` | MockMvc PUT/GET through S3 storage: all byte values and a 1 MiB payload |
 
-## 4. Remote debugging with IntelliJ
+### 4. Remote debugging with IntelliJ
 
 The commands below use the development container. Create a **Remote JVM Debug** configuration with host `localhost` and port `5005`. Use one debug session at a time.
 
-### Application
+#### Application
 
 ```bash
 docker compose exec dev mvn spring-boot:run \
@@ -88,7 +112,7 @@ docker compose exec dev mvn spring-boot:run \
 
 Then attach IntelliJ. The application starts without waiting for the debugger.
 
-### Tests
+#### Tests
 
 Start the test JVM suspended and waiting for IntelliJ:
 

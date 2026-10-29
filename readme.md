@@ -10,9 +10,9 @@ Sharing results requires a backend that stores and serves cache entries. This pr
 
 ## Using the service
 
-For local development, use Docker with Docker Compose. The development container provides JDK 25 and Maven; IntelliJ is optional for remote debugging.
+The application can run with JDK 25 and Maven on the host or through the `dev` service defined in `compose.yaml`. Docker is needed for `dev` and for the S3 integration tests.
 
-1. Start the service using the [development runbook](readme-dev.md). The default storage is in-memory; use [S3 configuration](readme-s3.md) for Amazon S3 or LocalStack.
+1. Start the service using the [application and test commands](readme-dev.md). The default storage is in-memory; use [S3 configuration](readme-s3.md) for Amazon S3 or LocalStack.
 2. [Configure the Maven client](readme-client.md) in the project whose builds should be cached, pointing it at the local or deployed service.
 
 ## Reference

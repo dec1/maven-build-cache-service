@@ -1,6 +1,6 @@
-## Docker command semantics
+## Development container lifecycle
 
-`dev` is the development service in `compose.yaml`. Its container stays running with `sleep infinity`; start the application or tests separately as described in the [development runbook](readme-dev.md).
+These commands manage the optional `dev` tool environment in `compose.yaml`. Its container stays running with `sleep infinity`; it provides JDK 25 and Maven but does not start the application or tests. For host/container run commands and the S3 tests' Docker requirement, see the [development runbook](readme-dev.md).
 
 | Command | Effect / when to use |
 | --- | --- |

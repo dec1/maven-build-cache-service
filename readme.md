@@ -1,5 +1,6 @@
 # Maven Build Cache Service
 
+[![CI Tests](https://github.com/dec1/maven-build-cache-service/actions/workflows/ci.yml/badge.svg)](https://github.com/dec1/maven-build-cache-service/actions/workflows/ci.yml)
 ## Motivation
 
 [Maven](https://maven.apache.org/what-is-maven.html) automates Java builds, including compilation, tests and packaging. Large builds can take a long time, and developers and continuous integration (CI) jobs may repeat work already completed by another build.

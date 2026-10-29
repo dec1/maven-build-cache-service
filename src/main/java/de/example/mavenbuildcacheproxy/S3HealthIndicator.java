@@ -9,10 +9,7 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
 
 /**
- * Adds S3 availability to /actuator/health when S3 storage is enabled.
- *
- * The check asks S3 whether the configured bucket is reachable.
- * If the request fails, Spring reports this health component as DOWN.
+ * Adds a bucket-access check to /actuator/health when S3 storage is enabled.
  */
 @Component
 @ConditionalOnProperty(name = "cache.storage.type", havingValue = "s3")
@@ -26,6 +23,10 @@ public class S3HealthIndicator extends AbstractHealthIndicator {
         this.bucket = properties.getBucket();
     }
 
+    /**
+     * Marks the bucket UP after HeadBucket succeeds. AbstractHealthIndicator converts failures to DOWN.
+     * This checks bucket access, not object read/write permissions.
+     */
     @Override
     protected void doHealthCheck(Health.Builder builder) {
         s3Client.headBucket(HeadBucketRequest.builder()

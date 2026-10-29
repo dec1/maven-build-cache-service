@@ -17,13 +17,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Tests the controller together with the configured (see application.properties) in-memory storage.
+ * Tests GET/PUT/HEAD through Spring MockMvc with the default in-memory storage.
  *
- * MockMvc simulates incoming HTTP requests inside Spring, so no real TCP server or socket is used.
- * The controller, request mapping, request/response bodies, status codes and storage calls are real.
- *
- * These tests therefore prove the application's HTTP behaviour up to the storage boundary,
- * but not real network transport and not S3.
+ * MockMvc exercises request handling without opening a TCP socket. S3 is not involved.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -34,13 +30,7 @@ class CacheControllerTest {
     private MockMvc mockMvc;
 
     /**
-     * Sends PUT /cache/... with binary data, then GETs the same key.
-     *
-     * The PUT goes through the real controller into the configured in-memory storage.
-     * The GET goes through the same path back out again.
-     *
-     * Passing proves that the controller accepts binary data, stores it under the requested key,
-     * returns 204 for PUT, returns 200 for GET, and preserves the bytes exactly.
+     * Checks PUT 204 and GET 200 with the original binary bytes and content type.
      */
     @Test
     @DisplayName("HTTP: PUT then GET preserves binary content")
@@ -60,9 +50,7 @@ class CacheControllerTest {
     }
 
     /**
-     * Sends GET /cache/... for a key that is not present in the in-memory storage.
-     *
-     * Passing proves that an empty storage result is translated by the controller to HTTP 404.
+     * Checks that a missing entry becomes HTTP 404.
      */
     @Test
     @DisplayName("HTTP: unknown cache key returns 404")
@@ -72,10 +60,7 @@ class CacheControllerTest {
     }
 
     /**
-     * Stores a key, then sends HEAD /cache/... for it.
-     *
-     * Passing proves that an existing storage key is translated to HTTP 200 without returning
-     * the stored body.
+     * Checks that HEAD for a stored entry returns 200 with no body.
      */
     @Test
     @DisplayName("HTTP: HEAD returns 200 for existing cache key")
@@ -93,9 +78,7 @@ class CacheControllerTest {
     }
 
     /**
-     * Sends HEAD /cache/... for a key that is not present in storage.
-     *
-     * Passing proves that a missing storage key is translated to HTTP 404.
+     * Checks that HEAD for a missing entry returns 404.
      */
     @Test
     @DisplayName("HTTP: HEAD returns 404 for missing cache key")

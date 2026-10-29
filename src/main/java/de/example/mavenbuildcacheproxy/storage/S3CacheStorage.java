@@ -16,11 +16,10 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
 import java.util.Optional;
 
 /**
- * Stores cache entries as S3 objects.
+ * Stores cache entries as objects in the configured S3 bucket.
  *
- * Each cache key becomes the S3 object key in the configured bucket.
- * The supplied S3 client decides whether requests go to Amazon S3, LocalStack, or another
- * S3-compatible endpoint.
+ * Each cache key becomes the object key. S3Configuration supplies the client and endpoint;
+ * the bucket must already exist.
  */
 @Component
 @ConditionalOnProperty(name = "cache.storage.type", havingValue = "s3")
@@ -34,6 +33,9 @@ public class S3CacheStorage implements CacheStorage {
         this.bucket = properties.getBucket();
     }
 
+    /**
+     * Writes the complete byte array to the object key; S3 failures propagate to the caller.
+     */
     @Override
     public void put(String key, byte[] content) {
         PutObjectRequest request = PutObjectRequest.builder()
@@ -44,6 +46,10 @@ public class S3CacheStorage implements CacheStorage {
         s3Client.putObject(request, RequestBody.fromBytes(content));
     }
 
+    /**
+     * Downloads the complete object into memory. A missing key or S3 404 returns empty;
+     * other S3 failures propagate to the caller.
+     */
     @Override
     public Optional<byte[]> get(String key) {
         GetObjectRequest request = GetObjectRequest.builder()
@@ -64,6 +70,10 @@ public class S3CacheStorage implements CacheStorage {
         }
     }
 
+    /**
+     * Uses HeadObject without downloading the body. A missing key or S3 404 returns false;
+     * other S3 failures propagate to the caller.
+     */
     @Override
     public boolean exists(String key) {
         HeadObjectRequest request = HeadObjectRequest.builder()

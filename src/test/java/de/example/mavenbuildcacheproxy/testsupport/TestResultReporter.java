@@ -6,8 +6,8 @@ import org.junit.jupiter.api.extension.TestWatcher;
 import java.util.Optional;
 
 /**
- * Prints a concise result line for every JUnit test so Maven output shows which behaviours passed
- * or failed, rather than only reporting aggregate counts per test class.
+ * JUnit watcher registered with @ExtendWith to print test outcomes and display names to stdout.
+ * Failure and abort lines include a cause; skipped tests include a reason when supplied.
  */
 public class TestResultReporter implements TestWatcher {
 

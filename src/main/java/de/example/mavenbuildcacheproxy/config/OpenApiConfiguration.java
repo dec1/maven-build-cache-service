@@ -5,9 +5,15 @@ import io.swagger.v3.oas.models.info.Info;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * Supplies service metadata for the generated OpenAPI description and Swagger UI.
+ */
 @Configuration
 public class OpenApiConfiguration {
 
+    /**
+     * Adds the service title, version and description; controller annotations describe operations.
+     */
     @Bean
     public OpenAPI openAPI() {
         return new OpenAPI()

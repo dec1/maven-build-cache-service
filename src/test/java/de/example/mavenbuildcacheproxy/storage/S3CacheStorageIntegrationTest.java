@@ -20,10 +20,8 @@ import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests S3CacheStorage against LocalStack S3.
- *
- * Spring creates S3CacheStorage and its S3Client through the same configuration used by the
- * application. The tests call the storage class directly, without the HTTP controller.
+ * Tests S3CacheStorage directly against LocalStack, using Spring to configure the storage and client.
+ * The HTTP controller is not involved. This class owns its LocalStack container and test bucket.
  */
 @SpringBootTest(properties = {
         "cache.storage.type=s3",
@@ -43,10 +41,7 @@ class S3CacheStorageIntegrationTest {
             .withServices("s3");
 
     static {
-        /*
-         * Spring needs the LocalStack endpoint while creating the application context.
-         * Start the container first so getEndpoint() can return its mapped address.
-         */
+        // Start before Spring resolves the dynamic S3 endpoint.
         LOCALSTACK.start();
     }
 
@@ -57,10 +52,7 @@ class S3CacheStorageIntegrationTest {
     private S3CacheStorage storage;
 
     /**
-     * Supplies the LocalStack values that are dynamic for this test run.
-     *
-     * The test container chooses its own mapped endpoint, so this does not depend on the
-     * LocalStack endpoint configured for normal local application runs.
+     * Supplies this test container's region and mapped endpoint before Spring creates the S3 client.
      */
     @DynamicPropertySource
     static void configureS3(DynamicPropertyRegistry registry) {
@@ -68,6 +60,9 @@ class S3CacheStorageIntegrationTest {
         registry.add("cache.storage.s3.localstack-endpoint", LOCALSTACK::getEndpoint);
     }
 
+    /**
+     * Creates the bucket before the tests; the application itself does not create buckets.
+     */
     @BeforeAll
     void createBucket() {
         s3Client.createBucket(CreateBucketRequest.builder()
@@ -75,16 +70,16 @@ class S3CacheStorageIntegrationTest {
                 .build());
     }
 
+    /**
+     * Stops the LocalStack container owned by this test class.
+     */
     @AfterAll
     static void stopLocalStack() {
         LOCALSTACK.stop();
     }
 
     /**
-     * Writes bytes through S3CacheStorage.put(), then reads the object directly with the
-     * application's S3Client.
-     *
-     * Passing proves that put() creates the expected S3 object with exactly the supplied bytes.
+     * Writes through storage and reads with the S3 client to check the object key and bytes.
      */
     @Test
     @DisplayName("S3: PUT stores exact bytes in S3")
@@ -104,9 +99,7 @@ class S3CacheStorageIntegrationTest {
     }
 
     /**
-     * Writes bytes through S3CacheStorage.put() and reads them back through S3CacheStorage.get().
-     *
-     * Passing proves that an S3 round trip through the storage adapter preserves the bytes exactly.
+     * Checks that a storage PUT/GET round trip preserves binary bytes.
      */
     @Test
     @DisplayName("S3: GET retrieves exact bytes")
@@ -120,10 +113,7 @@ class S3CacheStorageIntegrationTest {
     }
 
     /**
-     * Reads an S3 key that does not exist.
-     *
-     * Passing proves that S3CacheStorage converts S3's missing-object response to Optional.empty()
-     * instead of exposing the AWS SDK exception to its caller.
+     * Checks that a missing S3 object becomes an empty storage result.
      */
     @Test
     @DisplayName("S3: missing object returns empty")
@@ -132,9 +122,7 @@ class S3CacheStorageIntegrationTest {
     }
 
     /**
-     * Checks one stored S3 object and one missing key without downloading either object's contents.
-     *
-     * Passing proves that exists() uses S3 object metadata to distinguish present and missing keys.
+     * Checks HeadObject-based existence for one stored object and one missing key.
      */
     @Test
     @DisplayName("S3: existence check distinguishes stored and missing objects")

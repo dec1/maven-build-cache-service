@@ -12,7 +12,7 @@ import java.util.concurrent.ConcurrentMap;
  * Stores cache entries in memory inside the running application.
  *
  * Data is lost when the process stops.
- * This implementation is used by default unless S3 storage is selected.
+ * Selected when cache.storage.type=memory or the property is absent.
  */
 @Component
 @ConditionalOnProperty(name = "cache.storage.type", havingValue = "memory", matchIfMissing = true)
@@ -20,11 +20,17 @@ public class InMemoryCacheStorage implements CacheStorage {
 
     private final ConcurrentMap<String, byte[]> objects = new ConcurrentHashMap<>();
 
+    /**
+     * Stores a copy so later changes to the caller's array cannot change the entry.
+     */
     @Override
     public void put(String key, byte[] content) {
         objects.put(key, Arrays.copyOf(content, content.length));
     }
 
+    /**
+     * Returns a copy of the stored bytes, or empty if absent; callers cannot mutate stored data.
+     */
     @Override
     public Optional<byte[]> get(String key) {
         byte[] content = objects.get(key);
@@ -33,6 +39,9 @@ public class InMemoryCacheStorage implements CacheStorage {
                 : Optional.of(Arrays.copyOf(content, content.length));
     }
 
+    /**
+     * Checks map membership without copying the entry.
+     */
     @Override
     public boolean exists(String key) {
         return objects.containsKey(key);

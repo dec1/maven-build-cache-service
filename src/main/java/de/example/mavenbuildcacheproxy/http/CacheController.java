@@ -14,13 +14,9 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Exposes the cache over HTTP.
+ * Exposes binary cache entries under /cache, delegating storage to CacheStorage.
  *
- * PUT /cache/{key} stores the request body under that key.
- * GET /cache/{key} returns the stored bytes, or 404 if the key does not exist.
- * HEAD /cache/{key} returns 200 if the key exists, or 404 if it does not.
- *
- * The controller does not know whether the data is stored in memory, S3, or another backend.
+ * Keys may contain slashes. Request and response bodies are buffered as complete byte arrays.
  */
 @RestController
 @RequestMapping("/cache")
@@ -32,12 +28,19 @@ public class CacheController {
         this.storage = storage;
     }
 
+    /**
+     * Returns a diagnostic greeting at /cache/hello without consulting storage.
+     * This GET route takes precedence over retrieving a cache entry named hello.
+     */
     @Hidden
     @GetMapping(value = "/hello", produces = MediaType.TEXT_PLAIN_VALUE)
     public ResponseEntity<String> hello() {
         return ResponseEntity.ok("hello");
     }
 
+    /**
+     * Stores or replaces the bytes under the requested key; returns 204 after storage succeeds.
+     */
     @Operation(summary = "Store cache entry")
     @PutMapping("/{*key}")
     public ResponseEntity<Void> put(
@@ -48,6 +51,9 @@ public class CacheController {
         return ResponseEntity.noContent().build();
     }
 
+    /**
+     * Returns stored bytes as application/octet-stream, or 404 for a missing entry.
+     */
     @Operation(summary = "Get cache entry")
     @GetMapping(value = "/{*key}", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
     public ResponseEntity<byte[]> get(@PathVariable String key) {
@@ -58,6 +64,9 @@ public class CacheController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
+    /**
+     * Checks existence and returns 200 or 404 without returning object contents.
+     */
     @Operation(summary = "Check whether cache entry exists")
     @RequestMapping(value = "/{*key}", method = RequestMethod.HEAD)
     public ResponseEntity<Void> head(@PathVariable String key) {
@@ -66,6 +75,9 @@ public class CacheController {
                 : ResponseEntity.notFound().build();
     }
 
+    /**
+     * Removes the leading slash included by Spring's {*key} path capture; keeps nested key segments.
+     */
     private String normalizeKey(String key) {
         return key.startsWith("/") ? key.substring(1) : key;
     }

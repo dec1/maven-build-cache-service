@@ -15,18 +15,13 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * Tests the S3 part of application health without starting Spring or making a real S3 request.
- *
- * The S3 client is mocked so these tests only verify how a successful or failed bucket check is
- * translated into Actuator health.
+ * Tests bucket-check status mapping with a mocked S3 client; no Spring context or S3 requests.
  */
 @ExtendWith(TestResultReporter.class)
 class S3HealthIndicatorTest {
 
     /**
-     * Makes the S3 bucket check succeed.
-     *
-     * Passing proves that a reachable configured bucket produces health status UP.
+     * Checks that a successful HeadBucket call produces UP.
      */
     @Test
     @DisplayName("Health: reachable S3 bucket reports UP")
@@ -41,10 +36,7 @@ class S3HealthIndicatorTest {
     }
 
     /**
-     * Makes the S3 bucket check fail.
-     *
-     * Passing proves that an S3 failure produces health status DOWN instead of escaping from the
-     * health endpoint as an unhandled exception.
+     * Checks that a failed HeadBucket call produces DOWN rather than escaping from health().
      */
     @Test
     @DisplayName("Health: failed S3 bucket check reports DOWN")

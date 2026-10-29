@@ -10,7 +10,7 @@ import java.util.Optional;
 public interface CacheStorage {
 
     /**
-     * Stores the complete byte array under the given key.
+     * Stores the complete byte array under the given key, replacing any existing entry.
      */
     void put(String key, byte[] content);
 

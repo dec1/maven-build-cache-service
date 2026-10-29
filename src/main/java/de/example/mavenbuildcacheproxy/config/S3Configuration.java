@@ -12,16 +12,19 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3ClientBuilder;
 
 /**
- * Creates the S3 client when S3 storage is enabled.
+ * Creates the shared S3 client when cache.storage.type=s3.
  *
- * With backend=aws, the AWS SDK uses the normal Amazon S3 endpoint and normal AWS credentials.
- * With backend=localstack, the configured LocalStack endpoint and dummy credentials are used.
+ * AWS uses the SDK default credential chain; LocalStack uses an endpoint override and test/test credentials.
  */
 @Configuration
 @ConditionalOnProperty(name = "cache.storage.type", havingValue = "s3")
 @EnableConfigurationProperties(S3Properties.class)
 public class S3Configuration {
 
+    /**
+     * Validates bucket, region and the LocalStack endpoint when selected, then builds the client.
+     * Creating the client does not create or check the bucket.
+     */
     @Bean
     public S3Client s3Client(S3Properties properties) {
         requireText(properties.getRegion(), "cache.storage.s3.region");
@@ -46,6 +49,9 @@ public class S3Configuration {
         return builder.build();
     }
 
+    /**
+     * Rejects missing or blank required settings with the property name in the error.
+     */
     private static void requireText(String value, String propertyName) {
         if (value == null || value.isBlank()) {
             throw new IllegalStateException(

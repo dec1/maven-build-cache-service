@@ -5,10 +5,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import java.net.URI;
 
 /**
- * Holds the S3 settings used by the application.
+ * Binds cache.storage.s3 settings for S3Configuration, S3CacheStorage and S3HealthIndicator.
  *
- * Bucket and region are required when S3 storage is enabled.
- * Backend selects either Amazon S3 or LocalStack.
+ * The backend defaults to AWS. S3Configuration requires bucket and region, plus an endpoint for LocalStack.
  */
 @ConfigurationProperties(prefix = "cache.storage.s3")
 public class S3Properties {

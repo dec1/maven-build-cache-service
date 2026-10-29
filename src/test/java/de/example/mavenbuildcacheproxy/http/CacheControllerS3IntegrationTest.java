@@ -27,14 +27,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Tests binary data through the complete application path from the controller to S3 and back.
+ * Tests binary PUT/GET through MockMvc, CacheController and S3CacheStorage against LocalStack.
  *
- * MockMvc sends requests through Spring without opening a real TCP socket.
- * Everything after that is real: CacheController calls S3CacheStorage, the application's S3 client
- * writes to LocalStack S3, and GET reads the object back through the same path.
- *
- * These tests check that binary data is not changed by HTTP request handling, the storage layer,
- * the AWS SDK, S3 storage, or HTTP response handling.
+ * Spring configures the application's S3 client; this class owns its LocalStack container and bucket.
+ * MockMvc does not open a TCP socket or exercise a Maven client.
  */
 @SpringBootTest(properties = {
         "cache.storage.type=s3",
@@ -55,10 +51,7 @@ class CacheControllerS3IntegrationTest {
             .withServices("s3");
 
     static {
-        /*
-         * Spring needs the LocalStack endpoint while creating the application context.
-         * Start the container first so getEndpoint() can return its mapped address.
-         */
+        // Start before Spring resolves the dynamic S3 endpoint.
         LOCALSTACK.start();
     }
 
@@ -69,10 +62,7 @@ class CacheControllerS3IntegrationTest {
     private S3Client s3Client;
 
     /**
-     * Supplies the LocalStack values that are dynamic for this test run.
-     *
-     * The test container chooses its own mapped endpoint, so this does not depend on the
-     * LocalStack endpoint configured for normal local application runs.
+     * Supplies this test container's region and mapped endpoint before Spring creates the S3 client.
      */
     @DynamicPropertySource
     static void configureS3(DynamicPropertyRegistry registry) {
@@ -80,6 +70,9 @@ class CacheControllerS3IntegrationTest {
         registry.add("cache.storage.s3.localstack-endpoint", LOCALSTACK::getEndpoint);
     }
 
+    /**
+     * Creates the bucket before the tests; the application itself does not create buckets.
+     */
     @BeforeAll
     void createBucket() {
         s3Client.createBucket(CreateBucketRequest.builder()
@@ -87,16 +80,16 @@ class CacheControllerS3IntegrationTest {
                 .build());
     }
 
+    /**
+     * Stops the LocalStack container owned by this test class.
+     */
     @AfterAll
     static void stopLocalStack() {
         LOCALSTACK.stop();
     }
 
     /**
-     * Sends every possible byte value (0x00 through 0xff) through PUT and GET.
-     *
-     * Passing proves that the complete controller -> S3 -> controller path does not interpret the
-     * body as text or change any byte value, including zero bytes and values above 0x7f.
+     * Checks that all byte values (0x00 through 0xff) survive the controller/S3 round trip.
      */
     @Test
     @DisplayName("HTTP + S3: preserves all 256 possible byte values")
@@ -120,13 +113,7 @@ class CacheControllerS3IntegrationTest {
     }
 
     /**
-     * Sends 1 MiB of deterministic pseudo-random bytes through PUT and GET.
-     *
-     * A fixed random seed makes the payload identical on every test run, so a failure is
-     * reproducible. The payload contains arbitrary binary values rather than text.
-     *
-     * Passing proves that a realistically larger binary cache entry survives the complete
-     * controller -> S3 -> controller path byte-for-byte without truncation or modification.
+     * Checks a 1 MiB controller/S3 round trip; a fixed random seed makes failures reproducible.
      */
     @Test
     @DisplayName("HTTP + S3: preserves a 1 MiB binary payload byte-for-byte")

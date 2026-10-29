@@ -1,6 +1,14 @@
 # Maven Build Cache S3 Proxy
 
-Java HTTP service intended to act as a gateway between the Maven Build Cache Extension and an S3-compatible storage backend.
+## Motivation
+
+[Maven](https://maven.apache.org/what-is-maven.html) automates Java builds, including compilation, tests and packaging. Large builds can take a long time, and developers and continuous integration (CI) jobs may repeat work already completed by another build.
+
+The [Apache Maven Build Cache Extension](https://maven.apache.org/extensions/maven-build-cache-extension/) reduces repeated work by storing build outputs and reusing them when the configured inputs and execution checks match. It can use a local cache; an optional shared remote cache lets different machines reuse those results, including CI workers that start with an empty local cache.
+
+Sharing results requires a backend that stores and serves cache entries. This project provides an HTTP service for that role, backed by S3: the extension uploads and downloads entries over HTTP, and this service stores and retrieves their bytes using the S3 SDK. S3 keeps the entries independently of the service process and build workers.
+
+Users must enable and configure the extension in the project being built and point its remote cache at this service; running the service alone does not enable caching. See Apache's [remote cache setup](https://maven.apache.org/extensions/maven-build-cache-extension/remote-cache.html).
 
 ## Current architecture
 

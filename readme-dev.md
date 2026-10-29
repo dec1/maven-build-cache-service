@@ -1,110 +1,65 @@
 # Development Runbook
 
-## Docker command semantics
-
-_See also: [readme-docker](readme-docker.md)_
-
-
 ## 1. Initialize development environment
 
-Run after checkout, or after changing `Dockerfile.dev`:
+Run from the project root after checkout, or after changing `Dockerfile.dev`:
 
 ```bash
 docker compose up -d --build dev
 ```
 
-Check tools:
-
-```bash
-docker compose exec dev java -version
-docker compose exec dev mvn -version
-```
-
-Keep the `dev` container running while working.
-
----
+Keep the `dev` container running while working. Commands below run Maven inside it. For host-based Maven, use JDK 25 and Maven; the integration tests also need Docker.
 
 ## 2. Run application
-
-### 2.1 Normally     ****
 
 ```bash
 docker compose exec dev mvn spring-boot:run
 ```
 
+The default backend is in-memory. See [S3 configuration](readme-s3.md) to run against LocalStack or Amazon S3.
 
+| Endpoint | URL |
+| --- | --- |
+| Cache API | `http://localhost:8080/cache/{key}` |
+| Swagger UI | `http://localhost:8080/swagger-ui/index.html` |
+| Health | `http://localhost:8080/actuator/health` |
 
-####
-Service:
+Stop with `Ctrl+C`. Rerun the Maven command after Java or `pom.xml` changes; the bind mount makes edits visible without rebuilding the image.
 
--   ```text
-    http://localhost:8080
-    
-    http://localhost:8080/swagger-ui/index.html  (Swagger-Ui/OpenApi)
-    
-    http://localhost:8080/actuator/health     (health)
-    ```
+If a leftover application process occupies port `8080`, `docker compose restart dev` resets the container and its processes. Then rerun Maven. See [Docker lifecycle](readme-docker.md) for configuration changes and cleanup.
 
-
-
-Stop with `Ctrl+C`.
-
-If the next start reports that port `8080` is already in use:
+## 3. Run tests
 
 ```bash
-docker compose restart dev
+docker compose exec dev mvn test
 ```
 
-Then repeat **2.1**.
+Use `mvn clean test` in the same command to discard compiled output first, or `mvn verify` to run through packaging and verification. Neither requires removing containers or the Maven cache.
 
-### 2.2 With IntelliJ debugger
+| Tests | Boundary covered |
+| --- | --- |
+| `InMemoryCacheStorageTest` | Byte preservation, missing keys, existence and defensive copies |
+| `CacheControllerTest` | MockMvc GET/PUT/HEAD with memory storage |
+| `S3HealthIndicatorTest` | Bucket-check success/failure with a mocked S3 client |
+| `S3CacheStorageIntegrationTest` | Spring-configured storage against LocalStack: PUT/GET and existence checks |
+| `CacheControllerS3IntegrationTest` | MockMvc PUT/GET through S3 storage: all byte values and a 1 MiB payload |
 
-Start the application with remote debugging enabled:
+Both integration classes start their own LocalStack container and create their own bucket. They do not use the Compose `localstack` service. Docker must be running and accessible to the test JVM; Compose mounts the host Docker socket into `dev`.
+
+## 4. Remote debugging with IntelliJ
+
+Create a **Remote JVM Debug** configuration with host `localhost` and port `5005`. Use one debug session at a time.
+
+### Application
 
 ```bash
 docker compose exec dev mvn spring-boot:run \
   '-Dspring-boot.run.jvmArguments=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005'
 ```
 
-Then in IntelliJ start the existing **Remote JVM Debug** configuration:
+Then attach IntelliJ. The application starts without waiting for the debugger.
 
-```text
-Host: localhost
-Port: 5005
-```
-
-Set breakpoints in the Java source normally.
-
-If port `8080` is still occupied:
-
-```bash
-docker compose restart dev
-```
-
-Then repeat **2.2**.
-
----
-
-## 3. Run tests
-
-### 3.1 Quick test run   ***
-
-Use during normal development:
-
-```bash
-docker compose exec dev mvn test
-```
-#####
--  clean rebuild before runnig tests 
-    ```bash
-        docker compose exec dev mvn clean test
-    ```
-
-This compiles changed source/test code and runs the tests.
-
-### 3.2 Debug tests with IntelliJ breakpoints
-
-Make sure no application/debug session is currently using port `5005`.
+### Tests
 
 Start the test JVM suspended and waiting for IntelliJ:
 
@@ -114,123 +69,4 @@ docker compose exec dev mvn \
   test
 ```
 
-Maven will pause before executing the tests.
-
-Then in IntelliJ:
-
-```text
-1. Set breakpoint(s) in the test or production Java code.
-2. Start the existing Remote JVM Debug configuration.
-   Host: localhost
-   Port: 5005
-3. The tests continue and stop at matching breakpoints.
-```
-
-To debug only one test class:
-
-```bash
-docker compose exec dev mvn \
-  -Dtest=CacheControllerTest \
-  '-Dmaven.surefire.debug=-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5005' \
-  test
-```
-
-To debug one test method:
-
-```bash
-docker compose exec dev mvn \
-  '-Dtest=CacheControllerTest#putThenGetRoundTripPreservesBinaryContent' \
-  '-Dmaven.surefire.debug=-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5005' \
-  test
-```
-
-### 3.3 Full Maven verification
-
-Use before considering a change/chunk complete:
-
-```bash
-docker compose exec dev mvn verify
-```
-
-This runs the Maven lifecycle through `verify`: compile, test compilation, tests, packaging, and any additional verification steps configured in `pom.xml`.
-
-### 3.4 Clean Rebuild and Test
-```bash
-docker compose down -v --remove-orphans && docker compose build --no-cache dev && docker compose up -d dev && docker compose exec dev mvn clean test
-```
-
----
-
-## 4. After editing files
-
-### 4.1 Changed Java source
-
-No Docker rebuild required.
-
-```text
-run normally       -> 2.1
-debug application  -> 2.2
-run tests          -> 3.1
-debug tests        -> 3.2
-full verification  -> 3.3
-```
-
-### 4.2 Changed `pom.xml`
-
-No Docker rebuild required. Maven resolves changed dependencies automatically.
-
-```text
-run normally       -> 2.1
-debug application  -> 2.2
-run tests          -> 3.1
-debug tests        -> 3.2
-full verification  -> 3.3
-```
-
-### 4.3 Changed `Dockerfile.dev`
-
-```bash
-docker compose up -d --build dev
-```
-
-Then continue from **2** or **3**.
-
-### 4.4 Changed `compose.yaml`
-
-```bash
-docker compose up -d dev
-```
-
-Then continue from **2** or **3**.
-
----
-
-## 5. Cleanup
-
-Normal Java or `pom.xml` changes do **not** require cleanup.
-
-Stop/remove the development container when you want to tear down the environment:
-
-```bash
-docker compose down
-```
-
-The Maven cache is retained.
-
-To also delete the Maven cache:
-
-```bash
-docker compose down -v
-```
-
-After `docker compose down`:
-
-```bash
-docker compose up -d dev
-```
-
-If `Dockerfile.dev` changed:
-
-```bash
-docker compose up -d --build dev
-```
+Set breakpoints and attach IntelliJ to continue. Add `-Dtest=CacheControllerTest` to select a class, or `'-Dtest=CacheControllerTest#putThenGetRoundTripPreservesBinaryContent'` to select a method.

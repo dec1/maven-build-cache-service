@@ -2,88 +2,28 @@
 
 ## Health endpoint
 
-Spring Boot Actuator exposes:
-
 ```text
 GET /actuator/health
 ```
 
-With in-memory storage, this reports the normal Spring application health.
+With in-memory storage, this reports Spring Boot's application health without an S3 check.
 
-With S3 storage, `S3HealthIndicator` also checks the configured bucket with S3 `HeadBucket`:
+With S3 storage, `S3HealthIndicator` also calls `HeadBucket` for the configured bucket. A failed call marks that component `DOWN` and makes overall health `DOWN` (HTTP 503 by default). A successful bucket check does not verify object read/write permissions.
 
-```text
-/actuator/health
-    |
-    +-- application running
-    |
-    +-- configured S3 bucket reachable
-```
+A load balancer must be configured separately to poll this endpoint; no deployment configuration is supplied. For S3 permissions, see [S3 configuration](readme-s3.md).
 
-If the S3 check fails, the overall health status becomes `DOWN`. This allows the deployment load balancer to treat a running application with an unusable S3 backend as unhealthy.
-
-`HeadBucket` requires permission to check the bucket. The AWS task role therefore needs the corresponding bucket-level S3 permission in addition to the object permissions used for cache GET/PUT/HEAD operations.
-
-Only `health` is exposed through Actuator for now:
-
-```properties
-management.endpoints.web.exposure.include=health
-```
-
-Prometheus metrics are intentionally not enabled yet. If the optional Alloy -> Grafana Cloud setup is added later, add the Prometheus Micrometer registry and expose `/actuator/prometheus` at that point.
+Only `health` is exposed through Actuator by default. The project does not include a Prometheus registry or exporter configuration.
 
 ## Logging
 
-No Log4j or Log4j2 dependency/configuration is required.
+Spring Boot's default Logback setup writes application logs to the console. No custom logging configuration is supplied.
 
-Spring Boot's web starter already provides its default logging setup, which uses Logback and writes to the console. The application should therefore keep normal application logs on stdout/stderr:
-
-```text
-Spring application
-    |
-    | stdout/stderr
-    v
-ECS awslogs
-    |
-    v
-CloudWatch Logs
-```
-
-The ECS/Fargate deployment configures the `awslogs` driver and CloudWatch Log Group. Nothing CloudWatch-specific is required in the Java application.
-
-Do not add file logging inside the container unless there is a specific requirement for it.
+When running via `docker compose exec dev`, logs appear in the attached terminal. CloudWatch collection would require deployment logging configuration; the Java application does not configure it.
 
 ## Local check
 
-Start the application:
-
-```bash
-docker compose exec dev mvn spring-boot:run
-```
-
-Then check health:
+With the application running (see [development runbook](readme-dev.md)):
 
 ```bash
 curl -i http://localhost:8080/actuator/health
 ```
-
-For the default in-memory backend, the response should report `UP`.
-
-When running with the S3 backend, the response is `UP` only when the application can also reach the configured S3 bucket.
-
-## Tests
-
-Run:
-
-```bash
-docker compose exec dev mvn test
-```
-
-`S3HealthIndicatorTest` verifies:
-
-```text
-reachable S3 bucket -> UP
-failed S3 check     -> DOWN
-```
-
-The existing LocalStack integration tests continue to verify the real S3 storage path separately.

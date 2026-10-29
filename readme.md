@@ -1,126 +1,45 @@
 # Maven Build Cache S3 Proxy
 
-Small Java HTTP service intended to act as a gateway between the Maven Build Cache Extension and an S3-compatible storage backend.
-
-The project is being implemented incrementally. The current state is **Chunk 1**: the HTTP service and storage abstraction, using an in-memory storage implementation.
-
-_See also: [readme-dev](readme-dev.md)_
+Java HTTP service intended to act as a gateway between the Maven Build Cache Extension and an S3-compatible storage backend.
 
 ## Current architecture
 
-```text
-HTTP GET / PUT
-      |
-      v
-CacheController
-      |
-      v
-CacheStorage
-      |
-      v
-InMemoryCacheStorage
-```
+`CacheController` handles GET/PUT/HEAD and calls `CacheStorage`. Configuration selects one implementation:
 
-Later, `InMemoryCacheStorage` will be supplemented/replaced by an S3-backed implementation:
+| Storage | Selection | Stored state |
+| --- | --- | --- |
+| `InMemoryCacheStorage` | `cache.storage.type=memory` (default) | Per-process byte arrays; lost when the process stops |
+| `S3CacheStorage` | `cache.storage.type=s3` | Objects in an existing bucket; each cache key becomes the object key |
 
-```text
-CacheStorage
-      |
-      v
-S3CacheStorage
-      |
-      v
-LocalStack / Amazon S3
-```
+The service stores opaque bytes. It does not calculate Maven cache keys or decide whether a build can reuse an entry; those decisions belong to the Maven client.
 
 ## Requirements
 
-For local development:
+For local development, use Docker with Docker Compose. The development container provides JDK 25 and Maven; IntelliJ is optional for remote debugging.
 
-* Docker with Docker Compose
-* IntelliJ IDEA
-
-Maven does **not** need to be installed on the host. The development container provides the required JDK and Maven installation.
-
-See [`DOCKER_DEVELOPMENT.md`](DOCKER_DEVELOPMENT.md) for the complete development, testing and IntelliJ debugging workflow.
+* [Development and tests](readme-dev.md)
+* [Docker container lifecycle](readme-docker.md)
+* [S3 configuration and LocalStack](readme-s3.md)
+* [Health and logging](readme-monitoring.md)
 
 ## HTTP API
 
-### Store an object
+`{key}` is the path after `/cache/` and may contain slashes, for example `com/example/demo/hash/data`. The controller removes the leading slash before calling storage.
 
-```http
-PUT /cache/{key}
-Content-Type: application/octet-stream
-```
+| Request | Result |
+| --- | --- |
+| `PUT /cache/{key}` with a binary body (`Content-Type: application/octet-stream`) | Stores/replaces the bytes; returns `204 No Content` |
+| `GET /cache/{key}` | Returns `200 OK` with `application/octet-stream`, or `404 Not Found` for a missing entry |
+| `HEAD /cache/{key}` | Returns `200 OK` for an existing entry or `404 Not Found`; no response body |
 
-Example key:
+`GET /cache/hello` is a separate diagnostic route returning the text `hello`; avoid using `hello` as a cache key.
 
-```text
-/cache/com/example/demo/hash/data
-```
-
-A successful PUT returns:
-
-```text
-204 No Content
-```
-
-### Retrieve an object
-
-```http
-GET /cache/{key}
-```
-
-If the object exists:
-
-```text
-200 OK
-Content-Type: application/octet-stream
-```
-
-If it does not exist:
-
-```text
-404 Not Found
-```
-
-## Source layout
-
-```text
-src/
-├── main/java/de/example/mavenbuildcacheproxy
-│   ├── MavenBuildCacheProxyApplication.java
-│   ├── http/
-│   │   └── CacheController.java
-│   └── storage/
-│       ├── CacheStorage.java
-│       └── InMemoryCacheStorage.java
-└── test/java/de/example/mavenbuildcacheproxy
-    ├── http/
-    │   └── CacheControllerTest.java
-    └── storage/
-        └── InMemoryCacheStorageTest.java
-```
+Swagger UI: `http://localhost:8080/swagger-ui/index.html`.
 
 ## Current scope
 
-Chunk 1 covers:
+S3 storage, bucket health checks and LocalStack integration tests are implemented. The tests exercise storage and HTTP handling through MockMvc, but do not run a Maven Build Cache Extension client or verify real network transport.
 
-* Java/Maven Spring Boot application
-* minimal HTTP GET/PUT API
-* `CacheStorage` abstraction
-* in-memory storage implementation
-* automated tests
-* containerized development environment
-* IntelliJ remote debugging
-
-Not yet included:
-
-* AWS SDK
-* S3 storage
-* LocalStack
-* production service Docker image
-* Maven Build Cache test client
-* AWS deployment
+The supplied project has no production service image, AWS deployment, application authentication or cache eviction. PUT and GET buffer complete objects in JVM memory, including with S3 storage.
 
 

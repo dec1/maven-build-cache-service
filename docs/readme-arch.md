@@ -19,11 +19,22 @@ To add a backend, implement `CacheStorage` and configure Spring to select it as 
 
 ## Production storage
 
-Object storage such as S3 suits a shared production cache because entries survive service restarts and replacements, and multiple service instances can use the same bucket without sharing local disks.
+For this service's shared binary build artifacts, **Amazon S3 is the preferred production backend**:
 
-S3 [Lifecycle rules](https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-lifecycle-mgmt.html) can expire entries by age; configure retention on the bucket separately. This application does not configure those rules.
+* **Direct fit:** complete artifacts map to objects accessed by key through the SDK; no mounted filesystem or database schema is needed.
+* **Independent storage:** the retained dataset stays outside the application's memory and disks. Multiple service instances use the same bucket, and entries survive service restarts and replacements.
+* **Concurrent CI agents:** S3 commits whole objects atomically and provides strong read-after-write consistency, so another agent cannot read a partially written object. Concurrent writes to one key use last-writer-wins.
+* **Capacity and cost:** S3 grows without provisioning storage nodes or volumes or keeping the retained dataset in cache RAM. [Usage-based billing](https://aws.amazon.com/s3/pricing/) can be cost-effective for intermittent CI workloads; storage remains billable while objects are retained, with operation and applicable transfer charges.
+
+Identical uploads to one key preserve the same bytes. Different outputs for one key can overwrite each other; the adapter adds no conditional-write checks or transaction across keys. See [S3 consistency](https://docs.aws.amazon.com/AmazonS3/latest/userguide/Welcome.html#ConsistencyModel).
+
+S3 [Lifecycle rules](https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-lifecycle-mgmt.html) can automatically expire cache objects after a configurable age, for example **30 days**. Configure the rule on the bucket; this application does not set it. Deletion is asynchronous, so this is not an exact deletion deadline. For versioned buckets, also configure expiration of noncurrent versions to remove retained old data.
 
 _Tradeoff_: cache reads and writes require network requests to storage. The current S3 implementation still buffers complete objects in JVM memory, so using S3 does not remove per-request memory requirements.
+
+### Other clouds
+
+The corresponding object storage services are [Azure Blob Storage](https://learn.microsoft.com/en-us/azure/storage/blobs/storage-blobs-introduction) and [Google Cloud Storage](https://cloud.google.com/storage/docs/introduction). A native integration would add a `CacheStorage` adapter, provider-specific authentication/configuration and integration tests; neither is currently included.
 
 ## HTTP API
 

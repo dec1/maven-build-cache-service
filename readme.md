@@ -7,7 +7,7 @@
 
 The [Apache Maven Build Cache Extension](https://maven.apache.org/extensions/maven-build-cache-extension/) reduces repeated work by storing build outputs and reusing them when the configured inputs and execution checks match. It can use a local cache; an optional shared remote cache lets different machines reuse those results, including CI workers that start with an empty local cache.
 
-Sharing results requires a backend that stores and serves cache entries. This project provides that HTTP service with replaceable storage implementations. S3 is implemented and tested, while in-memory storage supports local development without an external storage service.
+Sharing results requires a backend that stores and serves cache entries. This project provides that HTTP service with replaceable storage implementations. Its S3 backend supports [Amazon S3](https://aws.amazon.com/s3/), AWS's object storage service, and is tested with LocalStack; in-memory storage supports local development without an external storage service.
 
 ## Using the service
 

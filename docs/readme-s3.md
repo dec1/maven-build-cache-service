@@ -1,5 +1,7 @@
 # S3 / LocalStack development and integration tests
 
+[Amazon Simple Storage Service (S3)](https://aws.amazon.com/s3/) is AWS's object storage service.
+
 ## Storage selection
 
 The default is `cache.storage.type=memory`. Select `s3` to use `S3CacheStorage`; create the bucket before using the service. The application does not create buckets.
